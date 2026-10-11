@@ -32,10 +32,18 @@ npm run format:check
 
 라이브 AI 검증에는 일반 API/계정 사용량이 발생할 수 있으며 자동 CI에서는 수행하지 않습니다. `node scripts/smoke-ai.mjs claude` 또는 `codex`로 예제 사본에 한정해 재현할 수 있습니다. 이 검증의 인증·정책 문제는 일반 설치·브라우저·파일 연결 테스트와 구분합니다.
 
+## 공개 배포 검증
+
+- GitHub 공개 저장소와 [v1.1.0 릴리스](https://github.com/ChiwooSong/htmledit/releases/tag/v1.1.0): 배포 완료. 공개 URL을 통한 설치와 예제 열기를 확인했습니다.
+- npm 패키지 [@woody_s/htmledit 1.1.0](https://www.npmjs.com/package/@woody_s/htmledit): 2026-10-11 게시 및 공개 조회 확인. `latest`는 `1.1.0`입니다. 기본 이름 `htmledit`이 기존 `html-edit`와 유사하다는 npm 제한에 따라 계정 범위를 사용합니다.
+- npm 레지스트리에서 실제 내려받아 별도의 임시 사용자 환경에 설치: 통과. Claude·Codex 두 스킬 설치, 영구 실행 코드, 파일 열기·HTTP 미리보기·서버 재사용, checkout/apply, 바이트 일치 백업, 원본 보존과 서버 종료를 확인했습니다.
+- npm tarball SHA-1: `92e3d719206149b94bc89afeaef9122f33ddd56d`. 로컬 게시 파일과 공개 레지스트리 값이 일치합니다. 같은 파일을 GitHub 릴리스의 `woody_s-htmledit-1.1.0.tgz` 자산으로도 제공합니다.
+- 공개 설치 검증은 위 실제 AI 반영 검증의 미완료 상태와 별개입니다.
+
 ## 운영 경계
 
 - 서비스 로그인, MCP, AI 자동 실행, 원격 파일 동기화는 포함하지 않습니다.
 - 상대 경로 자원 제공, 외부 API가 필요한 문서 동작은 기존 지원 범위 밖입니다.
 - 충돌 검사는 HTMLEdit를 통한 동시 쓰기에 적용합니다. 임의의 외부 프로그램이 검사와 교체 사이에 파일을 쓰는 것을 강제로 잠그지는 않습니다.
 - 백업과 후보 파일은 자동 삭제하지 않습니다. 디스크 공간 관리는 사용자가 수행합니다.
-- npm 최초 게시에는 유지관리자의 npm 인증이 필요합니다.
+- npm 게시는 유지관리자 계정의 2FA 인증을 사용합니다.
