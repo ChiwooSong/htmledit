@@ -133,6 +133,20 @@ export async function prepareFile(input: string) {
   }
   return canonicalFile(file);
 }
+// A native file choice may name the original again. Reuse its existing review,
+// validating it instead of replacing saved edits or notes.
+export async function prepareSelectedFile(input: string) {
+  const source = await canonicalFile(input);
+  let file: string;
+  try {
+    file = await prepareFile(source);
+  } catch (error) {
+    if (!(error instanceof LocalError) || error.code !== 'EXISTS') throw error;
+    file = await canonicalFile(source.replace(/\.html?$/i, '.review.html'));
+  }
+  validateReview((await snapshot(file)).html);
+  return file;
+}
 export class DocumentStore {
   private queue: Promise<unknown> = Promise.resolve();
   constructor(public file: string) {}

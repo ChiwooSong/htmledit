@@ -37,7 +37,7 @@ export async function localRequest<T>(
     method,
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: data === undefined ? undefined : JSON.stringify(data),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(path === 'open-document' ? 315_000 : 15_000),
   });
   const value = await response.json();
   if (!response.ok) throw new ConnectionError(value.code, value.message);

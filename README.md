@@ -16,7 +16,7 @@ npx @woody_s/htmledit@latest open "./document.html"
 GitHub 릴리스 패키지로 설치할 수도 있습니다:
 
 ```powershell
-npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.1.1/woody_s-htmledit-1.1.1.tgz htmledit install --agent all
+npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.2.0/woody_s-htmledit-1.2.0.tgz htmledit install --agent all
 ```
 
 `--agent claude` 또는 `--agent codex`로 한 도구만 설치할 수도 있습니다. Claude Code에서는 `/htmledit`, Codex에서는 `$htmledit`를 선택하거나 “이 HTML을 HTMLEdit로 열어줘”라고 요청하세요. 설치 후 보이지 않으면 새 AI 세션을 여세요.
@@ -27,7 +27,9 @@ npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.
 4. AI는 임시 사본을 수정하고 `checkout`/`apply`로 검증·백업한 뒤 작업 파일에 반영합니다. 변경된 파일은 화면에 자동 반영됩니다.
 5. 완료한 요청을 확인하고 **완성본 저장**으로 메모 없는 HTML을 받습니다.
 
-연결 모드에서는 상단에 작업 파일의 전체 경로가 표시됩니다. HTML 열기 대신 AI에게 다른 파일을 열어 달라고 요청하세요. 파일별로 독립된 로컬 서버를 실행합니다. 다운로드 방식의 기존 편집기도 계속 사용할 수 있습니다.
+연결 모드에서는 상단에 작업 파일의 전체 경로가 표시됩니다. **다른 문서 열기**를 누르면 미저장 작업의 저장 여부를 확인한 뒤 Windows 파일 선택 창에서 새 HTML을 선택할 수 있습니다. 작성 중인 문구나 메모는 먼저 적용하거나 취소해 주세요. 파일 선택 취소·오류 시 현재 작업을 유지하고, 기존 작업 사본이 있으면 덮어쓰지 않고 다시 엽니다. 저장 실패 시에는 전환하지 않습니다. 저장하지 않고 전환한 변경은 기존 문서의 임시 작업으로 보관합니다.
+
+새 문서는 같은 탭의 별도 파일 연결로 열립니다. 이전 문서의 서버·백업은 유지됩니다. 문서를 바꾼 뒤에는 **AI에게 보낼 설명 복사**로 새 작업 경로를 AI 대화에 전달하세요. 파일 선택 창은 Windows에서 지원하며, 다른 환경에서는 AI에게 다른 파일을 열어 달라고 요청할 수 있습니다. 다운로드 방식의 기존 편집기도 계속 사용할 수 있습니다.
 
 ### 저장 충돌과 복구
 

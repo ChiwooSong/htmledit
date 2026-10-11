@@ -3,8 +3,17 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { readFile, writeFile, mkdir, cp, readdir, rm, open, rename } from 'node:fs/promises';
-import { canonicalFile, prepareFile, hash, snapshot, DocumentStore, LocalError } from './store';
+import {
+  canonicalFile,
+  prepareFile,
+  prepareSelectedFile,
+  hash,
+  snapshot,
+  DocumentStore,
+  LocalError,
+} from './store';
 import { startServer } from './server';
+import { pickHtmlFile } from './picker';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const userHome = process.env.HTMLEDIT_USER_HOME || homedir();
@@ -69,7 +78,12 @@ async function serve(file: string) {
     await writeFile(lock, String(process.pid), { flag: 'wx', mode: 0o600 });
   }
   try {
-    const instance = await startServer(file, join(root, 'dist'));
+    const instance = await startServer(file, join(root, 'dist'), async () => {
+      const selected = await pickHtmlFile();
+      if (!selected) return null;
+      const next = await ensure(await prepareSelectedFile(selected));
+      return { url: `${next.origin}/#htmledit=${next.token}` };
+    });
     const connection: Connection = {
       origin: instance.origin,
       token: instance.token,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowUp,
   Check,
@@ -85,6 +86,9 @@ export default function App() {
   const [localDraft, setLocalDraft] = useState<LocalDraft | null>(null);
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const openingRef = useRef(false);
+  const leavingRef = useRef(false);
   const [history, setHistory] = useState<History<DocumentSession> | null>(null);
   const session = history?.present ?? null;
   const sessionRef = useRef(session);
@@ -112,6 +116,7 @@ export default function App() {
     message: string;
     action: string;
     run: () => void;
+    secondary?: { label: string; run: () => void };
   } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [help, setHelp] = useState(false);
@@ -202,7 +207,7 @@ export default function App() {
   }, [elementMap, selectedId]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
-      if (dirty) {
+      if (dirty && !leavingRef.current) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -272,11 +277,11 @@ export default function App() {
     void initial();
     const timer = setInterval(async () => {
       const current = connectedRef.current;
-      if (disposed || polling || savingRef.current || !current) return;
+      if (disposed || polling || savingRef.current || openingRef.current || !current) return;
       polling = true;
       try {
         const status = await localRequest<{ revision: string }>(token, 'status');
-        if (disposed || savingRef.current) return;
+        if (disposed || savingRef.current || openingRef.current) return;
         if (status.revision !== connectedRef.current?.revision) {
           const activeFrame = document.querySelector<HTMLIFrameElement>(
             'iframe[sandbox="allow-same-origin"]',
@@ -296,6 +301,7 @@ export default function App() {
             if (
               !disposed &&
               !savingRef.current &&
+              !openingRef.current &&
               !pendingInput.current &&
               JSON.stringify(sessionRef.current) === savedSignature.current
             )
@@ -349,7 +355,7 @@ export default function App() {
   };
   const openFile = async (file: File) => {
     if (token) {
-      notify('연결 모드에서는 다른 파일을 CLI의 open 명령으로 열어 주세요.', true);
+      notify('연결 모드에서는 상단의 ‘다른 문서 열기’로 파일을 선택해 주세요.', true);
       return;
     }
     if (reading) return;
@@ -398,10 +404,10 @@ export default function App() {
     notify('수정 요청을 저장했습니다.');
   };
   const save = async (kind: 'review' | 'clean', downloadOnly = false) => {
-    if (!session) return;
+    if (!session) return false;
     try {
       if (token && connected && kind === 'review' && !downloadOnly) {
-        if (savingRef.current) return;
+        if (savingRef.current) return false;
         savingRef.current = true;
         setSaving(true);
         const signature = JSON.stringify(session);
@@ -420,19 +426,89 @@ export default function App() {
         setLocalDraft(null);
         setExportStatus(`작업 파일 저장 ${time(Date.now())}`);
         notify('작업 파일을 저장했습니다. AI 대화에 “메모 반영해줘”라고 요청하세요.');
-        return;
+        return true;
       }
       downloadHtml(exportDocument(session, kind), exportName(session.fileName, kind));
       if (!token) savedSignature.current = JSON.stringify(session);
       setExportStatus(`${kind === 'review' ? 'AI 전달용' : '완성본'} 저장 ${time(Date.now())}`);
       notify(`${exportName(session.fileName, kind)} 파일을 저장했습니다.`);
+      return true;
     } catch (error) {
       if (error instanceof ConnectionError && error.code === 'CONFLICT') setConflict(true);
       notify(error instanceof Error ? error.message : '저장하지 못했습니다.', true);
+      return false;
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
+  };
+  const chooseLocalDocument = async (saveFirst: boolean) => {
+    if (!token || openingRef.current || savingRef.current) return;
+    openingRef.current = true;
+    setOpening(true);
+    try {
+      if (saveFirst && !(await save('review'))) return;
+      const result = await localRequest<{ url: string } | null>(token, 'open-document', 'POST', {});
+      if (!result) {
+        notify('파일 선택을 취소했습니다. 현재 문서를 계속 편집할 수 있습니다.');
+        return;
+      }
+      const url = new URL(result.url);
+      if (url.origin === location.origin) {
+        notify('현재 편집 중인 문서입니다. 작업을 그대로 유지합니다.');
+        return;
+      }
+      if (
+        url.protocol !== 'http:' ||
+        url.hostname !== '127.0.0.1' ||
+        url.username ||
+        url.password ||
+        !/^#htmledit=[a-f0-9]{64}$/.test(url.hash)
+      )
+        throw new Error('새 문서 연결 주소를 확인할 수 없습니다.');
+      // Persist a recovery copy before leaving, including on the discard path.
+      // A picker cancellation or failure never clears the current history.
+      const current = sessionRef.current;
+      const connection = connectedRef.current;
+      if (current && connection && JSON.stringify(current) !== savedSignature.current)
+        await localRequest(token, 'draft', 'PUT', {
+          html: exportDocument(current, 'review'),
+          revision: connection.revision,
+        });
+      leavingRef.current = true;
+      window.location.assign(url.href);
+    } catch (error) {
+      leavingRef.current = false;
+      notify(
+        error instanceof Error
+          ? error.message
+          : '새 문서를 열지 못했습니다. 현재 작업은 유지됩니다.',
+        true,
+      );
+    } finally {
+      openingRef.current = false;
+      setOpening(false);
+    }
+  };
+  const openAnotherDocument = () => {
+    if (!token) {
+      fileInput.current?.click();
+      return;
+    }
+    if (pendingInput.current || document.querySelector('[aria-label="문구 직접 편집"]')) {
+      notify('작성 중인 문구나 메모를 먼저 적용하거나 취소한 뒤 다른 문서를 열어 주세요.', true);
+      return;
+    }
+    if (dirty)
+      setModal({
+        title: '현재 작업을 저장할까요?',
+        message:
+          '아직 작업 파일에 저장하지 않은 변경이 있습니다. 저장 여부를 선택한 다음 Windows 파일 선택 창에서 다른 HTML을 고르세요. 파일 선택을 취소하면 현재 문서는 유지됩니다.',
+        action: '저장 후 문서 선택',
+        run: () => void chooseLocalDocument(true),
+        secondary: { label: '저장하지 않고 문서 선택', run: () => void chooseLocalDocument(false) },
+      });
+    else void chooseLocalDocument(false);
   };
   const copy = async () => {
     if (!session) return;
@@ -494,6 +570,7 @@ export default function App() {
   return (
     <div
       className="app"
+      inert={opening}
       onDragOver={(event) => {
         event.preventDefault();
         if (event.dataTransfer.types.includes('Files')) setDragOver(true);
@@ -563,11 +640,11 @@ export default function App() {
       <div className="toolbar">
         <button
           className="button"
-          onClick={() => fileInput.current?.click()}
-          disabled={reading || Boolean(token)}
+          onClick={openAnotherDocument}
+          disabled={reading || opening || saving || (Boolean(token) && !connected)}
         >
           <FolderOpen size={16} />
-          {reading ? '불러오는 중…' : 'HTML 열기'}
+          {reading ? '불러오는 중…' : token ? '다른 문서 열기' : 'HTML 열기'}
         </button>
         <span className="toolbar-divider" />
         <div className="mode-switch" aria-label="편집 모드">
@@ -1337,6 +1414,18 @@ export default function App() {
               <button className="button" onClick={() => setModal(null)}>
                 취소
               </button>
+              {modal.secondary && (
+                <button
+                  className="button"
+                  onClick={() => {
+                    const action = modal.secondary!.run;
+                    setModal(null);
+                    action();
+                  }}
+                >
+                  {modal.secondary.label}
+                </button>
+              )}
               <button
                 className="button primary"
                 onClick={() => {
@@ -1411,6 +1500,24 @@ export default function App() {
           </section>
         </div>
       )}
+      {opening &&
+        createPortal(
+          <div className="modal-backdrop">
+            <section
+              className="modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="다른 문서 연결 중"
+            >
+              <h2>다른 문서 열기</h2>
+              <p>
+                Windows 파일 선택 창에서 HTML 문서를 선택하거나 취소해 주세요. 저장과 새 문서 연결이
+                끝날 때까지 현재 작업을 유지합니다.
+              </p>
+            </section>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -1,10 +1,153 @@
 import { test, expect } from '@playwright/test';
 import { mkdtemp, writeFile, readFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { once } from 'node:events';
-import { prepareFile } from '../../scripts/local/store';
+import {
+  prepareFile,
+  prepareSelectedFile,
+  DocumentStore,
+  LocalError,
+} from '../../scripts/local/store';
 import { startServer } from '../../scripts/local/server';
+
+for (const saveFirst of [true, false]) {
+  test(`다른 문서 열기: 취소·선택 오류·미적용 입력 보존 및 ${saveFirst ? '저장 후' : '저장 없이'} 연결`, async ({
+    page,
+  }) => {
+    const directory = await mkdtemp(join(tmpdir(), 'htmledit-switch-'));
+    const services: Awaited<ReturnType<typeof startServer>>[] = [];
+    try {
+      const original = join(directory, '첫 문서.html');
+      const secondOriginal = join(directory, '다른 문서.html');
+      await writeFile(original, '<!doctype html><html><body><h1>첫 제목</h1></body></html>');
+      await writeFile(
+        secondOriginal,
+        '<!doctype html><html><body><h1>둘째 제목</h1></body></html>',
+      );
+      const file = await prepareFile(original);
+      const secondFile = await prepareFile(secondOriginal);
+      // Existing saved reviews must be reused, not recreated from the original.
+      await writeFile(
+        secondFile,
+        (await readFile(secondFile, 'utf8')).replace('둘째 제목', '기존 둘째 작업'),
+      );
+      const second = await startServer(secondFile, resolve('dist'));
+      services.push(second);
+      let choice: 'cancel' | 'error' | 'same' | 'second' = 'cancel';
+      let calls = 0;
+      const first = await startServer(file, resolve('dist'), async () => {
+        calls++;
+        if (choice === 'cancel') return null;
+        if (choice === 'error') throw new LocalError('PICKER_FAILED', '파일 선택 실패');
+        if (choice === 'same') return { url: first.url };
+        expect(await prepareSelectedFile(secondOriginal)).toBe(secondFile);
+        return { url: second.url };
+      });
+      services.push(first);
+      await page.goto(first.url);
+      const frame = page.frameLocator('iframe[sandbox="allow-same-origin"]');
+      const open = page.getByRole('button', { name: '다른 문서 열기', exact: true });
+      await expect(frame.locator('h1')).toHaveText('첫 제목');
+      await frame.locator('h1').click();
+      await page.getByRole('textbox', { name: '문구 1', exact: true }).fill('아직 적용 안 함');
+      await open.click();
+      await expect(page.getByRole('alert')).toContainText('먼저 적용하거나 취소');
+      expect(calls).toBe(0);
+      await page.getByRole('button', { name: '문구 적용', exact: true }).click();
+      await open.click();
+      await page.getByRole('dialog').getByRole('button', { name: '취소', exact: true }).click();
+      expect(calls).toBe(0);
+      const discard = async () => {
+        await open.click();
+        await page.getByRole('button', { name: '저장하지 않고 문서 선택', exact: true }).click();
+      };
+      await discard();
+      await expect(page.getByText('파일 선택을 취소했습니다.', { exact: false })).toBeVisible();
+      await expect(frame.locator('h1')).toHaveText('아직 적용 안 함');
+      choice = 'error';
+      await discard();
+      await expect(page.getByRole('alert')).toContainText('파일 선택 실패');
+      await expect(frame.locator('h1')).toHaveText('아직 적용 안 함');
+      choice = 'same';
+      await discard();
+      await expect(page.getByText('현재 편집 중인 문서입니다.', { exact: false })).toBeVisible();
+      await expect(frame.locator('h1')).toHaveText('아직 적용 안 함');
+      choice = 'second';
+      await open.click();
+      await page
+        .getByRole('button', {
+          name: saveFirst ? '저장 후 문서 선택' : '저장하지 않고 문서 선택',
+          exact: true,
+        })
+        .click();
+      await expect(page).toHaveURL(`${second.origin}/`);
+      await expect(frame.locator('h1')).toHaveText('기존 둘째 작업');
+      await expect(page.getByRole('button', { name: '실행 취소', exact: true })).toBeDisabled();
+      const savedFirst = await readFile(file, 'utf8');
+      expect(savedFirst).toContain(saveFirst ? '아직 적용 안 함' : '첫 제목');
+      if (!saveFirst)
+        expect((await new DocumentStore(file).draft())?.html).toContain('아직 적용 안 함');
+      expect(await readFile(original, 'utf8')).toContain('첫 제목');
+      await frame.locator('h1').click();
+      await page.getByRole('textbox', { name: '문구 1', exact: true }).fill('새 연결에서 저장');
+      await page.getByRole('button', { name: '문구 적용', exact: true }).click();
+      await page.getByRole('button', { name: '작업 파일 저장', exact: true }).click();
+      await expect(page.getByText(/작업 파일을 저장했습니다/)).toBeVisible();
+      expect(await readFile(secondFile, 'utf8')).toContain('새 연결에서 저장');
+      expect(await readFile(file, 'utf8')).toBe(savedFirst);
+    } finally {
+      for (const service of services) {
+        const closed = once(service.server, 'close');
+        service.server.close();
+        service.server.closeAllConnections();
+        await closed;
+      }
+      const target = resolve(directory);
+      if (!target.startsWith(resolve(tmpdir()) + sep) || !target.includes('htmledit-switch-'))
+        throw new Error('Unsafe cleanup path');
+      await rm(target, { recursive: true, force: true });
+    }
+  });
+}
+
+test('다른 문서 열기: 저장 충돌이면 파일 선택과 전환을 하지 않는다', async ({ page }) => {
+  const directory = await mkdtemp(join(tmpdir(), 'htmledit-switch-conflict-'));
+  const original = join(directory, 'conflict.html');
+  await writeFile(original, '<html><body><h1>처음</h1></body></html>');
+  const file = await prepareFile(original);
+  let calls = 0;
+  const service = await startServer(file, resolve('dist'), async () => {
+    calls++;
+    return null;
+  });
+  try {
+    await page.goto(service.url);
+    const frame = page.frameLocator('iframe');
+    await frame.locator('h1').click();
+    await page.getByRole('textbox', { name: '문구 1', exact: true }).fill('내 수정');
+    await page.getByRole('button', { name: '문구 적용', exact: true }).click();
+    await writeFile(file, (await readFile(file, 'utf8')).replace('처음', '외부 수정'));
+    await page.getByRole('button', { name: '다른 문서 열기', exact: true }).click();
+    await page.getByRole('button', { name: '저장 후 문서 선택', exact: true }).click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(frame.locator('h1')).toHaveText('내 수정');
+    expect(calls).toBe(0);
+    expect(await readFile(file, 'utf8')).toContain('외부 수정');
+  } finally {
+    const closed = once(service.server, 'close');
+    service.server.close();
+    service.server.closeAllConnections();
+    await closed;
+    const target = resolve(directory);
+    if (
+      !target.startsWith(resolve(tmpdir()) + sep) ||
+      !target.includes('htmledit-switch-conflict-')
+    )
+      throw new Error('Unsafe cleanup path');
+    await rm(target, { recursive: true, force: true });
+  }
+});
 
 test('작업 파일 저장, 외부 변경 갱신, 충돌과 임시 복구', async ({ page }, testInfo) => {
   const directory = await mkdtemp(join(tmpdir(), 'htmledit-browser-'));

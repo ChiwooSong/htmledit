@@ -26,11 +26,16 @@ async function body(request: IncomingMessage) {
     throw new LocalError('JSON', 'JSON 요청이 필요합니다.');
   }
 }
-export async function startServer(file: string, assets: string) {
+export async function startServer(
+  file: string,
+  assets: string,
+  openDocument?: () => Promise<{ url: string } | null>,
+) {
   const store = new DocumentStore(file);
   await store.read();
   const token = randomBytes(32).toString('hex');
   let origin = '';
+  let choosing = false;
   const server = createServer(async (request, response) => {
     const json = (status: number, value: unknown) => {
       response.writeHead(status, {
@@ -51,6 +56,34 @@ export async function startServer(file: string, assets: string) {
           ['cross-site', 'same-site'].includes(String(request.headers['sec-fetch-site']))
         )
           throw new LocalError('AUTH', '이 작업에 연결된 편집기만 접근할 수 있습니다.', 403);
+        if (request.method === 'POST' && url.pathname === '/api/open-document') {
+          if (request.headers.origin !== origin)
+            throw new LocalError('ORIGIN', '편집기에서 파일을 선택해 주세요.', 403);
+          const data = await body(request);
+          if (
+            url.search ||
+            !data ||
+            Array.isArray(data) ||
+            typeof data !== 'object' ||
+            Object.keys(data).length
+          )
+            throw new LocalError(
+              'INPUT',
+              '파일 경로는 요청으로 받지 않습니다. 파일 선택 창을 사용해 주세요.',
+            );
+          if (!openDocument)
+            throw new LocalError(
+              'PICKER_UNAVAILABLE',
+              '편집기를 최신 실행 도구로 다시 열어 주세요.',
+            );
+          if (choosing) throw new LocalError('BUSY', '이미 파일 선택 창이 열려 있습니다.', 409);
+          choosing = true;
+          try {
+            return json(200, await openDocument());
+          } finally {
+            choosing = false;
+          }
+        }
         if (request.method === 'GET' && url.pathname === '/api/document')
           return json(200, await store.read());
         if (request.method === 'GET' && url.pathname === '/api/status')

@@ -3,7 +3,13 @@ import { mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { once } from 'node:events';
-import { DocumentStore, prepareFile, snapshot, validateReview } from '../scripts/local/store';
+import {
+  DocumentStore,
+  prepareFile,
+  prepareSelectedFile,
+  snapshot,
+  validateReview,
+} from '../scripts/local/store';
 import { startServer } from '../scripts/local/server';
 import { readDocument, exportDocument, addNote, listElements } from '../src/model/document';
 
@@ -30,6 +36,17 @@ afterEach(async () => {
   for (const path of directories.splice(0)) await rm(path, { recursive: true, force: true });
 });
 describe('local document transactions', () => {
+  it('reuses an existing selected review without overwriting edits and rejects broken metadata', async () => {
+    const { original, file } = await fixture();
+    const changed = (await readFile(file, 'utf8')).replace('처음 제목', '저장된 기존 작업');
+    await writeFile(file, changed);
+    expect(await prepareSelectedFile(original)).toBe(file);
+    expect(await prepareSelectedFile(file)).toBe(file);
+    expect(await readFile(file, 'utf8')).toBe(changed);
+    await writeFile(file, changed.replace('"version":1', '"version":99'));
+    await expect(prepareSelectedFile(original)).rejects.toMatchObject({ code: 'METADATA' });
+    expect(await readFile(original, 'utf8')).toContain('처음 제목');
+  });
   it('creates a review once, preserves original, and reopens the review', async () => {
     const { original, file } = await fixture();
     expect(await readFile(original, 'utf8')).not.toContain('data-htmledit');
@@ -125,6 +142,46 @@ describe('local document transactions', () => {
   });
 });
 describe('local HTTP boundary', () => {
+  it('opens only a native selection, rejects path injection and concurrent dialogs, and preserves the old binding', async () => {
+    const { file } = await fixture();
+    let complete: (value: { url: string } | null) => void = () => {};
+    let calls = 0;
+    const service = await startServer(file, resolve('dist'), () => {
+      calls++;
+      return new Promise((resolve) => {
+        complete = resolve;
+      });
+    });
+    servers.push(service);
+    const auth = {
+      Authorization: `Bearer ${service.token}`,
+      Origin: service.origin,
+      'Content-Type': 'application/json',
+    };
+    const request = (headers = auth, data: unknown = {}) =>
+      fetch(`${service.origin}/api/open-document`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      });
+    expect((await request({ ...auth, Authorization: '' })).status).toBe(403);
+    expect((await request({ ...auth, Origin: '' })).status).toBe(403);
+    expect((await request({ ...auth, Origin: 'null' })).status).toBe(403);
+    expect((await request(auth, { file: 'C:/unselected.html' })).status).toBe(400);
+    expect(calls).toBe(0);
+    const choosing = request();
+    await expect.poll(() => calls).toBe(1);
+    expect((await request()).status).toBe(409);
+    complete(null);
+    expect(await (await choosing).json()).toBeNull();
+    const again = request();
+    await expect.poll(() => calls).toBe(2);
+    complete({ url: 'http://127.0.0.1:12345/#htmledit=selected' });
+    expect((await (await again).json()).url).toContain('127.0.0.1:12345');
+    expect(
+      (await (await fetch(`${service.origin}/api/document`, { headers: auth })).json()).file,
+    ).toBe(file);
+  });
   it('requires token and correct origin and only serves its bound document', async () => {
     const { file } = await fixture();
     const service = await startServer(file, resolve('dist'));
