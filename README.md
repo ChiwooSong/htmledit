@@ -6,17 +6,17 @@ AI가 만든 HTML을 화면에서 수정하고, 위치별 메모를 담아 다�
 
 Node.js **22.12 이상**과 로컬에서 실행되는 Claude Code 또는 Codex가 필요합니다. HTMLEdit에 별도 API 키를 넣지 않습니다.
 
-GitHub 릴리스 패키지로 설치:
+npm 패키지로 설치:
+
+```powershell
+npx @woody_s/htmledit@latest install --agent all
+npx @woody_s/htmledit@latest open "./document.html"
+```
+
+GitHub 릴리스 패키지로 설치할 수도 있습니다:
 
 ```powershell
 npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.1.0/htmledit-1.1.0.tgz htmledit install --agent all
-```
-
-npm 레지스트리 게시 후에는 다음 짧은 명령을 사용할 수 있습니다:
-
-```powershell
-npx htmledit@latest install --agent all
-npx htmledit@latest open "./document.html"
 ```
 
 `--agent claude` 또는 `--agent codex`로 한 도구만 설치할 수도 있습니다. Claude Code에서는 `/htmledit`, Codex에서는 `$htmledit`를 선택하거나 “이 HTML을 HTMLEdit로 열어줘”라고 요청하세요. 설치 후 보이지 않으면 새 AI 세션을 여세요.
