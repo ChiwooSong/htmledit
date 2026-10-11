@@ -55,4 +55,4 @@ npm run format:check
 - 동반 변경: GitHub Actions SHA 고정과 Dependabot 액션 갱신, `SECURITY.md`, 문서 옆 `.htmledit/`에 `*` `.gitignore` 자동 생성, README의 문서 조작 모드 한계 서술 정정, 스킬 지침의 URL 취급 보강.
 - 검증(2026-10-11): 1.1.1을 12:39 UTC에 trusted publishing으로 게시했습니다. 레지스트리 메타데이터에 `_resolved`·`_from`이 없고 `_npmUser`는 GitHub Actions이며 provenance 증명(`dist.attestations`)이 있습니다. `npx @woody_s/htmledit@latest --version`과 README의 릴리스 URL 설치가 모두 1.1.1을 출력했습니다. GitHub 릴리스 v1.1.1 자산 tarball의 SHA-1 `80c1fe8e3aebe8b6a853021921c9ea949b56fc2e`가 레지스트리 값과 일치하고, SHA-256 `0e68afecf891ac0c7663b803abbe10641d3639cf3d2b7be90fc059b8c83f4fe4`를 `SHA256SUMS`로 제공합니다.
 - 첫 실행의 실패 두 건: npmjs.com의 trusted publisher에 `npm publish` 허용 동작이 없어 E403("OIDC permission denied for this action")이 났고, 허용 후 재실행에서는 레지스트리 전파가 60초 재시도 창을 넘겨 릴리스 단계가 ETARGET으로 끝났습니다. 릴리스는 레지스트리 tarball로 수동 생성했고, 워크플로는 게시·릴리스 job을 분리하고 재시도 창을 6분으로 늘렸습니다.
-- 1.1.0과 0.0.0-stage unpublish: 진행 예정.
+- 1.1.0과 0.0.0-stage unpublish: 2026-10-11 완료. 레지스트리 `versions`에 1.1.1만 남았고 어느 버전의 메타데이터에도 로컬 경로가 없음을 확인했습니다.
