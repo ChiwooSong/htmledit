@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-09T04:49:54.130Z",
+  "results": [
+    {
+      "channel": "chrome",
+      "version": "154.0.8037.95",
+      "title": "HTMLEdit · 화면에서 고치고, 메모로 전달하세요",
+      "checks": [
+        "built app opens",
+        "text edit",
+        "anchored note",
+        "review download",
+        "no runtime errors"
+      ]
+    },
+    {
+      "channel": "msedge",
+      "version": "154.0.4258.53",
+      "title": "HTMLEdit · 화면에서 고치고, 메모로 전달하세요",
+      "checks": [
+        "built app opens",
+        "text edit",
+        "anchored note",
+        "review download",
+        "no runtime errors"
+      ]
+    }
+  ]
+}

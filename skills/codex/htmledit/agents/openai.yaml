@@ -1,0 +1,4 @@
+interface:
+  display_name: 'HTMLEdit'
+  short_description: '화면에서 HTML을 수정하고 위치별 메모를 같은 작업 파일에 반영합니다'
+  default_prompt: 'Use $htmledit to open this HTML for visual editing and apply my saved notes.'
