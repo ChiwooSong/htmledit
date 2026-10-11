@@ -39,5 +39,5 @@ Do not auto-message another conversation or start a separate AI process.
 ## Lifecycle
 
 Use `stop --file "<review>"` when the user asks to close the local server; stopping does not delete documents, candidates or backups.
-Use the same runner for `install --agent claude|codex|all` updates and `uninstall --agent claude|codex|all` removal.
+Use the same runner for `uninstall --agent claude|codex|all` removal. To update, use the new release's installation command; the installed runner deliberately stays pinned to its version.
 The tool preserves modified existing skill files instead of silently overwriting them.

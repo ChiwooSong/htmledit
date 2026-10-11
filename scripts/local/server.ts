@@ -97,10 +97,17 @@ export async function startServer(file: string, assets: string) {
       });
       response.end(request.method === 'HEAD' ? undefined : bytes);
     } catch (error) {
-      json(error instanceof LocalError ? error.status : 500, {
-        code: error instanceof LocalError ? error.code : 'IO',
-        message: error instanceof Error ? error.message : '파일 작업 실패',
-      });
+      json(
+        error instanceof LocalError
+          ? error.status
+          : (error as NodeJS.ErrnoException).code === 'ENOENT'
+            ? 404
+            : 500,
+        {
+          code: error instanceof LocalError ? error.code : 'IO',
+          message: error instanceof Error ? error.message : '파일 작업 실패',
+        },
+      );
     }
   });
   await new Promise<void>((resolve, reject) => {

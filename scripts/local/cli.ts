@@ -92,7 +92,14 @@ async function serve(file: string) {
 }
 async function ensure(file: string) {
   const existing = await live(file);
-  if (existing) return existing;
+  if (existing) {
+    if (existing.version !== manifest.version)
+      throw new LocalError(
+        'VERSION',
+        '다른 버전의 서버가 실행 중입니다. 브라우저 작업을 저장한 뒤 stop으로 종료하고 다시 열어 주세요.',
+      );
+    return existing;
+  }
   await mkdir(join(home, 'sessions'), { recursive: true });
   const log = await open(`${registry(file)}.log`, 'a');
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '_serve', file], {

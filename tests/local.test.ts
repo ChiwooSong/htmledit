@@ -103,6 +103,15 @@ describe('local document transactions', () => {
     await writeFile(original, Buffer.alloc(25 * 1024 * 1024 + 1));
     await expect(snapshot(original)).rejects.toMatchObject({ code: 'SIZE_LIMIT' });
   });
+  it('preserves the working file when a backup cannot be created', async () => {
+    const { store, directory } = await fixture();
+    const initial = await store.read();
+    await writeFile(join(directory, '.htmledit'), 'A file blocks the backup directory');
+    await expect(
+      store.save(initial.html.replace('처음 제목', 'Must not be written'), initial.revision),
+    ).rejects.toBeDefined();
+    expect(await store.read()).toEqual(initial);
+  });
 });
 describe('local HTTP boundary', () => {
   it('requires token and correct origin and only serves its bound document', async () => {
@@ -128,7 +137,7 @@ describe('local HTTP boundary', () => {
     const result = await (await fetch(`${service.origin}/api/document`, { headers: auth })).json();
     expect(result.file).toBe(file);
     expect((await fetch(`${service.origin}/api/arbitrary`, { headers: auth })).status).toBe(404);
-    expect((await fetch(`${service.origin}/package.json`)).status).toBe(500);
+    expect((await fetch(`${service.origin}/package.json`)).status).toBe(404);
     const put = await fetch(`${service.origin}/api/document`, {
       method: 'PUT',
       headers: { ...auth, 'Content-Type': 'application/json', Origin: service.origin },
