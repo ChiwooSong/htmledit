@@ -112,7 +112,10 @@ function sourceViewerHtml(root: T.Node): string | undefined {
     )
       return;
     // parse5 decoded one layer of entities. A second decode would damage literals.
-    lines.push(text(cells[1]));
+    // A source-view row represents exactly one original line. Formatting the
+    // saved shell can insert newlines around syntax spans, even inside a quoted
+    // attribute. Those belong to the shell; original line breaks come from rows.
+    lines.push(text(cells[1]).replace(/[\r\n]/g, ''));
   }
   const source = lines.join('\n');
   if (/<(?:!doctype\s+html|html|head|body)\b/i.test(source)) return source;

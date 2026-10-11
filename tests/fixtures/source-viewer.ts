@@ -12,3 +12,10 @@ export function sourceViewer(source: string) {
     );
   return `<!-- saved from url=(0022)file:///document.html --><html><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"></head><body><div class="line-gutter-backdrop"></div><form autocomplete="off"><label class="line-wrap-control">Line wrap<input type="checkbox" aria-label="Line wrap"></label></form><table><tbody>${lines.join('')}</tbody></table></body></html>`;
 }
+
+export function formattedSourceViewer(source: string) {
+  return sourceViewer(source)
+    .replace(/(id|onclick|title)="([^"]*)"/g, '$1="<span class="html-attribute-value">$2</span>"')
+    .replaceAll('>', '>\n\n')
+    .replaceAll('<', '\n\n<');
+}

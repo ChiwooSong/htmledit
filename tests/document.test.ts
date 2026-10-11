@@ -18,7 +18,7 @@ import {
 } from '../src/model/document';
 import { commit, createHistory, redo, undo } from '../src/model/history';
 import { EXAMPLE_HTML } from '../src/example';
-import { sourceViewer } from './fixtures/source-viewer';
+import { formattedSourceViewer, sourceViewer } from './fixtures/source-viewer';
 
 const fixture =
   '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>원본 제목</title><style>p{color:red}strong{font-weight:700}</style></head><body><h1>안녕 <strong>온기</strong> 👋</h1><p style="background-color: #eee; color:red; padding:8px">설명</p><picture><source srcset="other.webp"><img src="old.png" srcset="a.png 1x, b.png 2x" sizes="100vw" alt="이미지" width="200"></picture><script>window.original = "<keep>";</script></body></html>';
@@ -53,6 +53,15 @@ describe('HTML 문서 모델과 왕복 저장', () => {
     expect(restored.notes).toEqual(session.notes);
     expect(named(restored, 'h1').id).toBe(target.id);
     expect(restored.metadataIssue).toBeUndefined();
+  });
+  it('정렬된 소스 보기의 구문 span 줄바꿈이 ID와 스크립트를 손상시키지 않는다', () => {
+    const source = `<!doctype html>\n<html><body><button id="nav" onclick="go(0)">이동</button>
+<section id="s0" title="공백 유지">화면</section><pre>첫 줄
+
+  &lt;svg&gt; &amp; 끝</pre>
+<script>function go(n) { document.getElementById('s'+n).style.display='block'; }\ngo(0);</script></body></html>`;
+    const restored = readDocument(formattedSourceViewer(source));
+    expect(exportDocument(restored, 'clean')).toBe(exportDocument(readDocument(source), 'clean'));
   });
   it('HTML 코드를 설명하는 일반 문서는 자동 변환하지 않는다', () => {
     const source =

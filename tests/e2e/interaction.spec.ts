@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { formattedSourceViewer } from '../fixtures/source-viewer';
 
 const fixture = `<!doctype html><html><head><meta charset="utf-8"><style>
 body{font-family:Arial;padding:30px}.active{color:blue}section{padding:20px}h2{font-size:24px}
@@ -28,6 +29,23 @@ async function interact(page: Page) {
   await page.getByRole('button', { name: '문서 조작', exact: true }).click();
   await expect(page.getByText('문서 조작 준비 중…')).toHaveCount(0);
 }
+
+test('정렬된 소스 보기 파일의 메뉴로 전체 채팅 화면에 이동한다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const source = fixture.replace(
+    "const screens = [...document.querySelectorAll('section')];",
+    "const screens = [0,1,2].map(i => document.getElementById('s'+i));",
+  );
+  await open(page, formattedSourceViewer(source));
+  await interact(page);
+  await live(page).getByRole('button', { name: '두 번째 화면' }).click();
+  await expect(live(page).locator('#s1')).toBeVisible();
+  await expect(live(page).locator('#s0')).toBeHidden();
+  await page.getByRole('button', { name: '직접 편집', exact: true }).click();
+  await expect(editable(page).locator('#s1 h2')).toHaveText('전체 채팅');
+  expect(errors).toEqual([]);
+});
 
 test('메뉴 이동 → 현재 화면 편집·메모 → 재조작 → 저장 후에도 메뉴 동작 유지', async ({ page }) => {
   const errors: string[] = [];

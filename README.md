@@ -16,7 +16,7 @@ npx @woody_s/htmledit@latest open "./document.html"
 GitHub 릴리스 패키지로 설치할 수도 있습니다:
 
 ```powershell
-npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.2.0/woody_s-htmledit-1.2.0.tgz htmledit install --agent all
+npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.2.1/woody_s-htmledit-1.2.1.tgz htmledit install --agent all
 ```
 
 `--agent claude` 또는 `--agent codex`로 한 도구만 설치할 수도 있습니다. Claude Code에서는 `/htmledit`, Codex에서는 `$htmledit`를 선택하거나 “이 HTML을 HTMLEdit로 열어줘”라고 요청하세요. 설치 후 보이지 않으면 새 AI 세션을 여세요.
