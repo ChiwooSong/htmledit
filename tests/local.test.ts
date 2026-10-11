@@ -103,6 +103,17 @@ describe('local document transactions', () => {
     await writeFile(original, Buffer.alloc(25 * 1024 * 1024 + 1));
     await expect(snapshot(original)).rejects.toMatchObject({ code: 'SIZE_LIMIT' });
   });
+  it('keeps the working folder out of version control without replacing a custom ignore file', async () => {
+    const { store, directory } = await fixture();
+    const initial = await store.read();
+    await store.saveDraft(initial.html.replace('처음 제목', '임시 작업'), initial.revision);
+    const ignore = join(directory, '.htmledit', '.gitignore');
+    expect(await readFile(ignore, 'utf8')).toBe('*\n');
+    await writeFile(ignore, '# custom\n');
+    await store.checkout();
+    await store.save(initial.html.replace('처음 제목', '저장'), initial.revision);
+    expect(await readFile(ignore, 'utf8')).toBe('# custom\n');
+  });
   it('preserves the working file when a backup cannot be created', async () => {
     const { store, directory } = await fixture();
     const initial = await store.read();

@@ -21,13 +21,20 @@ export class LocalError extends Error {
   }
 }
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
-async function localDirectory(directory: string) {
+// Working files live next to the user's document, which may be inside a Git
+// repository. The .htmledit root gets a `*` .gitignore once; an existing file is kept.
+async function localDirectory(root: string, directory: string) {
   await mkdir(directory, { recursive: true });
   if ((await realpath(directory)) !== resolve(directory))
     throw new LocalError(
       'PATH_CHANGED',
       '작업용 폴더가 다른 위치를 가리킵니다. 링크를 제거한 뒤 다시 시도해 주세요.',
     );
+  try {
+    await writeFile(join(root, '.gitignore'), '*\n', { flag: 'wx' });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
 }
 export async function canonicalFile(file: string) {
   if (!/\.html?$/i.test(file)) throw new LocalError('FILE_TYPE', 'HTML 파일을 지정해 주세요.');
@@ -129,8 +136,14 @@ export async function prepareFile(input: string) {
 export class DocumentStore {
   private queue: Promise<unknown> = Promise.resolve();
   constructor(public file: string) {}
+  private get root() {
+    return join(dirname(this.file), '.htmledit');
+  }
+  private get workspace() {
+    return join(this.root, hash(this.file).slice(0, 16));
+  }
   private get draftFile() {
-    return join(dirname(this.file), '.htmledit', hash(this.file).slice(0, 16), 'draft.json');
+    return join(this.workspace, 'draft.json');
   }
   async draft() {
     try {
@@ -157,7 +170,7 @@ export class DocumentStore {
       await unlink(this.draftFile).catch(() => {});
       return { savedAt };
     }
-    await localDirectory(dirname(this.draftFile));
+    await localDirectory(this.root, this.workspace);
     const temp = `${this.draftFile}.${randomUUID()}.tmp`;
     try {
       await writeFile(temp, JSON.stringify({ html, revision, savedAt }));
@@ -196,13 +209,8 @@ export class DocumentStore {
   async checkout() {
     const value = await this.read();
     validateReview(value.html);
-    const directory = join(
-      dirname(this.file),
-      '.htmledit',
-      hash(this.file).slice(0, 16),
-      'candidates',
-    );
-    await localDirectory(directory);
+    const directory = join(this.workspace, 'candidates');
+    await localDirectory(this.root, directory);
     const candidate = join(directory, `${randomUUID()}.review.html`);
     await writeFile(candidate, value.html, { flag: 'wx' });
     return { file: this.file, candidate, revision: value.revision };
@@ -217,13 +225,8 @@ export class DocumentStore {
           409,
         );
       validateReview(html, ai ? current.html : undefined);
-      const directory = join(
-        dirname(this.file),
-        '.htmledit',
-        hash(this.file).slice(0, 16),
-        'backups',
-      );
-      await localDirectory(directory);
+      const directory = join(this.workspace, 'backups');
+      await localDirectory(this.root, directory);
       const backup = join(directory, `${Date.now()}-${randomUUID()}.html`);
       // Preserve original bytes, including BOM, in the backup.
       const original = await readFile(this.file);

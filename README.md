@@ -16,7 +16,7 @@ npx @woody_s/htmledit@latest open "./document.html"
 GitHub 릴리스 패키지로 설치할 수도 있습니다:
 
 ```powershell
-npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.1.0/htmledit-1.1.0.tgz htmledit install --agent all
+npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.1.1/woody_s-htmledit-1.1.1.tgz htmledit install --agent all
 ```
 
 `--agent claude` 또는 `--agent codex`로 한 도구만 설치할 수도 있습니다. Claude Code에서는 `/htmledit`, Codex에서는 `$htmledit`를 선택하거나 “이 HTML을 HTMLEdit로 열어줘”라고 요청하세요. 설치 후 보이지 않으면 새 AI 세션을 여세요.
@@ -33,7 +33,7 @@ npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.
 
 - 브라우저와 AI의 쓰기는 파일 내용의 SHA-256 버전을 비교합니다. 오래된 파일을 기준으로 한 저장은 거절합니다.
 - 외부 변경을 발견했을 때 미저장 편집이 있으면 화면을 교체하지 않습니다. **내 작업 별도 저장**으로 보관한 뒤 **디스크 버전 다시 열기**를 선택하세요.
-- 연결 작업의 임시 저장, AI 후보 파일, 변경 전 백업은 작업 파일 옆 `.htmledit/`에 보관합니다. 서버 재시작 후에도 임시 작업을 복구할 수 있습니다. 이 폴더를 Git에 올리지 마세요.
+- 연결 작업의 임시 저장, AI 후보 파일, 변경 전 백업은 작업 파일 옆 `.htmledit/`에 보관합니다. 서버 재시작 후에도 임시 작업을 복구할 수 있습니다. 이 폴더에는 `*`를 담은 `.gitignore`를 함께 만들어 두므로 작업 파일이 Git 저장소 안에 있어도 커밋되지 않습니다.
 - 다운로드 모드는 기존처럼 IndexedDB를 사용합니다. 연결 모드는 포트가 바뀌어도 복구할 수 있도록 로컬 서버의 파일별 임시 저장을 사용합니다.
 - AI 결과를 다시 불러오면 실행 취소 기록을 새로 시작합니다. 이전 결과는 `.htmledit/`의 백업 HTML로 복구할 수 있습니다.
 - 파일을 다른 프로그램에서 직접 쓰는 작업은 HTMLEdit의 쓰기 잠금을 따르지 않습니다. 버전 검사는 대부분의 충돌을 감지하지만, 외부 프로그램의 동시 쓰기를 운영체제 수준에서 잠그지는 않습니다. AI는 반드시 스킬의 `apply` 절차를 사용하세요.
@@ -107,7 +107,7 @@ npm start
 
 CSS와 이미지가 포함된 정적 단일 HTML을 기준으로 합니다. 외부 자원은 자동 수집하지 않으며, 관련 폴더 입력·자유 그림·좌표 핀·새 요소 삽입·배치 이동은 후속 범위입니다. 상대 경로 자원과 스크립트 의존성은 화면에서 안내합니다.
 
-직접 편집·메모 모드에서는 스크립트를 실행하지 않습니다. 문서 조작 모드에서는 파일 안의 스크립트와 이벤트를 편집기와 출처가 분리된 프레임에서 실행합니다. 외부 실행 스크립트, API 요청, 폼 전송, 새 창 및 상위 페이지 이동은 허용하지 않습니다. 외부 링크의 기본 이동과 메타 태그 자동 이동도 차단합니다. 스크립트 자체가 프레임 주소를 바꾸면 조작 연결이 끊어질 수 있으며, **첫 화면으로**로 다시 시작할 수 있습니다. 원본 스크립트와 이벤트는 저장 결과에 보존합니다. 동적 차트, React 앱, Tailwind 실행 스크립트에 의존하는 화면의 표시·동작은 보장하지 않습니다. 데스크톱·768px·390px 전환은 반응형 배치를 확인하는 기능입니다.
+직접 편집·메모 모드에서는 스크립트를 실행하지 않습니다. 문서 조작 모드에서는 파일 안의 스크립트와 이벤트를 편집기와 출처가 분리된 프레임에서 실행합니다. 이 프레임은 편집기 화면·브라우저 저장 공간·연결 토큰에 접근할 수 없고, 외부 스크립트 파일 로드, fetch·XHR 요청, 폼 전송, 새 창 열기, 상위 페이지 이동, 외부 링크의 기본 이동, 메타 태그 자동 이동을 차단합니다. 다만 문서 안의 스크립트는 조작 중인 화면의 편집 내용을 읽을 수 있고, 외부 이미지·스타일 요청이나 프레임 자체의 주소 이동으로 외부 주소에 데이터를 보낼 수 있습니다. 브라우저 샌드박스로 막을 수 없는 한계이므로 출처를 신뢰할 수 없는 문서에서는 문서 조작 모드를 사용하지 마세요. 스크립트가 프레임 주소를 바꾸면 조작 연결이 끊어지며, **첫 화면으로**로 다시 시작할 수 있습니다. 원본 스크립트와 이벤트는 저장 결과에 보존합니다. 동적 차트, React 앱, Tailwind 실행 스크립트에 의존하는 화면의 표시·동작은 보장하지 않습니다. 데스크톱·768px·390px 전환은 반응형 배치를 확인하는 기능입니다.
 
 구현은 [MDN의 iframe sandbox 설명](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#sandbox)에 따라 조작 프레임에 `allow-scripts`만, 편집 프레임에 `allow-same-origin`만 사용합니다. 상태 전달은 [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)로 연결한 MessageChannel을 사용하며 전달받은 표시 상태를 문서 모델에 저장하지 않습니다.
 

@@ -249,7 +249,7 @@ export default function Preview(props: Props) {
         <div className="interaction-bar">
           <span>
             {interacting
-              ? '메뉴와 버튼을 눌러 이동하세요. 원하는 화면에서 직접 편집을 선택하세요.'
+              ? '메뉴와 버튼을 눌러 이동하세요. 원하는 화면에서 직접 편집을 선택하세요. 문서의 스크립트가 실행되므로 신뢰하는 문서에서만 사용하세요.'
               : '조작한 화면을 편집하고 있습니다. 다른 화면은 문서 조작에서 이동하세요.'}
           </span>
           <button

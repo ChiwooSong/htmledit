@@ -14,7 +14,7 @@ Node.js 22.12+ is required. The installed runtime is version-pinned and does not
 Run `open "<user-selected.html>" --json`. It creates an adjacent `.review.html` once and opens the browser.
 If EXISTS is returned, report the existing review path and open that review file; never overwrite it with the original.
 If the input already ends in .review.html, reopen it directly.
-Return the working path and URL. Keep the token-bearing URL out of document content and public logs.
+Report the working path and confirm the browser opened. The URL carries the edit token: do not repeat it in the reply, document content or logs. Give the user the URL only if they report that the browser did not open.
 The browser saves changes only when the user clicks 작업 파일 저장. Tell the user to save and ask here to apply their notes.
 Do not apply notes merely because a document was opened.
 

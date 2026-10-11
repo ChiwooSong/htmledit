@@ -1,0 +1,42 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Require npm 11.5.1 or newer for trusted publishing
+        run: |
+          node -e "const [a,b,c]=require('child_process').execSync('npm --version').toString().trim().split('.').map(Number);process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" || npm install -g npm@latest
+          npm --version
+      - name: Check that the tag matches the package version
+        run: node -e "const v=require('./package.json').version;if(process.env.GITHUB_REF_NAME!=='v'+v){console.error('Tag '+process.env.GITHUB_REF_NAME+' does not match package version '+v);process.exit(1)}"
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Publish to npm (directory publish, OIDC trusted publishing, automatic provenance)
+        run: npm publish
+      - name: Create the GitHub release from the published tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          mkdir release && cd release
+          for attempt in 1 2 3 4 5 6; do
+            if npm pack "@woody_s/htmledit@${version}" --ignore-scripts; then break; fi
+            if [ "$attempt" = 6 ]; then exit 1; fi
+            sleep 10
+          done
+          sha256sum *.tgz > SHA256SUMS
+          cat SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" *.tgz SHA256SUMS --title "HTMLEdit ${version}" --generate-notes

@@ -47,3 +47,10 @@ npm run format:check
 - 충돌 검사는 HTMLEdit를 통한 동시 쓰기에 적용합니다. 임의의 외부 프로그램이 검사와 교체 사이에 파일을 쓰는 것을 강제로 잠그지는 않습니다.
 - 백업과 후보 파일은 자동 삭제하지 않습니다. 디스크 공간 관리는 사용자가 수행합니다.
 - npm 게시는 유지관리자 계정의 2FA 인증을 사용합니다.
+
+## 1.1.1 재게시 (2026-10-11)
+
+- 사유: 1.1.0을 tarball 경로로 게시한 탓에 npm 레지스트리 메타데이터의 `_resolved`·`_from` 필드에 게시자 PC의 절대 경로가 기록되었습니다. 레지스트리 메타데이터는 수정할 수 없고 같은 버전 번호는 재사용할 수 없으므로 1.1.1로 재게시하고, 1.1.0과 자리표시 버전 0.0.0-stage는 1.1.1 게시 뒤 unpublish합니다.
+- 방식: `.github/workflows/release.yml`이 `v*` 태그 푸시에서 디렉터리 기준 `npm publish`를 npm trusted publishing으로 수행합니다. 장기 토큰이 없고 provenance가 자동으로 붙습니다. 릴리스 자산은 레지스트리에서 내려받은 tarball과 `SHA256SUMS`입니다.
+- 동반 변경: GitHub Actions SHA 고정과 Dependabot 액션 갱신, `SECURITY.md`, 문서 옆 `.htmledit/`에 `*` `.gitignore` 자동 생성, README의 문서 조작 모드 한계 서술 정정, 스킬 지침의 URL 취급 보강.
+- 검증: 게시 후 기록합니다.

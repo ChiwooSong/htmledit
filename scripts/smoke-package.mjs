@@ -114,7 +114,7 @@ try {
     JSON.stringify(
       {
         passed: true,
-        version: '1.1.0',
+        version: packed.version,
         files: packed.files.length,
         checks: [
           'npm exec tarball',
