@@ -314,6 +314,11 @@ test('단순 재저장은 시각 결과를 유지하고 AI 메모를 문서에 �
   page,
 }, testInfo) => {
   await open(page);
+  // Compare document pixels, excluding the editor's rounded-frame compositing.
+  // On the Windows CI GPU, reloading changes only the 5px corner antialiasing.
+  await page.addStyleTag({
+    content: '.frame-wrap, .frame-wrap iframe { border-radius: 0 !important; }',
+  });
   const before = await page
     .locator('iframe')
     .screenshot({ path: testInfo.outputPath('before.png') });
