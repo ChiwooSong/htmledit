@@ -104,5 +104,27 @@ npm run format:check
 - 새 파일의 서버와 토큰으로 같은 탭을 이동하며, 기존 서버의 지정 파일은 바꾸지 않습니다. API로 임의 경로를 받지 않고, 같은 출처와 인증을 확인한 요청만 OS 파일 선택 창을 열 수 있습니다. 중복 요청은 거절합니다.
 - 빌드 및 단위 테스트 **43개 통과**. Chrome·Edge의 연결 모드 테스트 **10개 통과**(새 전환 시나리오 6개 포함). 파일 선택은 자동 테스트에서 주입한 선택기로 재현하고 실제 로컬 서버·저장·탭 이동을 검증했습니다.
 - 전체 브라우저 테스트는 첫 실행에서 **51/52 통과**했습니다. 기존 Edge의 ‘원본 예제와 완성본의 브라우저 렌더링이 같다’ 이미지 바이트 비교 1건이 실패했고, 해당 테스트 단독 재실행은 통과했습니다. 전체 실행이 한 번에 모두 통과한 것으로 기록하지 않습니다.
-- 패키지 설치 검증, 형식 검사, `git diff --check` 통과. npm 재게시나 릴리스 태그 생성은 하지 않았으며, 이 기능은 아직 로컬 개발본에만 포함됩니다.
+- 패키지 설치 검증, 형식 검사, `git diff --check` 통과. 이 개발본 검증 시점에는 npm 재게시나 릴리스 태그 생성 전이었습니다. 이후 공개 배포 결과는 다음 절에 기록합니다.
 - 실제 Windows 선택 창 검증도 통과했습니다. 사용자가 창에서 `second.html`을 선택한 뒤 내장 브라우저의 같은 탭이 `second.review.html`의 새 연결로 이동했습니다. 새 화면에서 제목을 수정·저장했고, 새 작업 파일만 변경되며 이전 작업 파일과 두 원본 HTML은 보존됨을 확인했습니다.
+
+## 1.2.0 공개 배포 (2026-10-11)
+
+- 문서 전환 기능과 버전 변경을 `6c13d38`로 main에 푸시했습니다. [Windows CI](https://github.com/ChiwooSong/htmledit/actions/runs/38143160811)에서 빌드, 형식 검사, 단위 테스트 43개, Chrome·Edge 브라우저 테스트 52개, 패키지 설치 검증이 모두 통과했습니다. 앞 절의 개발본 재시도 기록과 구분되는 전체 성공 실행입니다.
+- 해당 커밋의 `v1.2.0` 태그를 푸시해 [Release 워크플로](https://github.com/ChiwooSong/htmledit/actions/runs/38143474859)를 실행했습니다. publish와 release job이 모두 성공했습니다. 로컬 `npm publish`는 실행하지 않았습니다.
+- npm의 공개 버전과 `latest`는 `1.2.0`입니다. `_npmUser`는 GitHub Actions이며 `dist.attestations`에 SLSA provenance가 있습니다. `_resolved`·`_from` 필드가 없음을 확인했습니다.
+- [GitHub v1.2.0 릴리스](https://github.com/ChiwooSong/htmledit/releases/tag/v1.2.0)의 tarball을 내려받아 npm 레지스트리 tarball 및 `SHA256SUMS`와 비교했습니다. SHA-256은 `c01c76d7078206fef034239f8c4e1b92433dfdb5a8e1b10e511716c4c9288545`, 레지스트리 SHA-1은 `ce8dacc2c89d7c51a727f20e90ac6a9f1f8a417b`입니다.
+
+## 1.2.0 Claude Code 실사용 검증 (2026-10-11)
+
+**결과: 통과.** 공개 npm 패키지로 설치한 새 Claude 세션에서 문서 전환 후 새 작업 파일의 메모 반영까지 확인했습니다. Claude의 보고와 별도로 브라우저 화면 및 파일을 검사했습니다.
+
+- 같은 Windows PC에 연결된 새 Claude Code Remote Control 세션에서 `npx --yes @woody_s/htmledit@1.2.0 install --agent claude`를 실행했습니다. 설치된 스킬의 runner가 `versions/1.2.0/runtime/cli.mjs`를 참조하며, 해당 runner로 연 편집기의 버전이 1.2.0임을 확인했습니다.
+- 설치 중 발견한 재현 조건: 동일 이름·버전의 개발 저장소 루트에서 npm 11.6.0의 npx를 실행하면 로컬 패키지가 우선되어 `htmledit is not recognized`로 실패했습니다. 저장소 밖의 빈 폴더에서 공개 패키지를 설치하면 성공합니다. Claude는 테스트 전용 새 캐시로도 공개 tarball 다운로드와 설치를 확인했습니다. 기존 캐시·전역 설정을 삭제하지 않았고, 로컬 빌드로 대체하지 않았습니다.
+- 테스트 문서는 `.cache/release-1.2.0-live/`의 `first.html`과 `second.html`입니다. 공개 문서에는 연결 토큰과 세션 URL, PC 절대 경로를 기록하지 않습니다.
+- 첫 문서의 제목을 화면에서 “첫 문서 저장 후 전환 검증”으로 수정한 뒤 **다른 문서 열기**를 눌렀습니다. 미저장 확인 창에서 **취소**하면 문구와 현재 연결이 유지됐습니다. 다시 **저장 후 문서 선택**을 실행해 사용자가 실제 Windows 파일 선택 창에서 `second.html`을 골랐습니다.
+- 같은 브라우저 탭이 새 서버의 `second.review.html`로 이동했습니다. 전환 후 첫 작업 파일에 제목 변경이 저장됐으며 두 원본의 SHA-256이 유지됨을 확인했습니다.
+- 두 번째 문서의 h1에 “새 문서 연결과 Claude 반영 성공”으로 바꾸고 글자색·배치를 유지하라는 메모 1개를 추가하고 **작업 파일 저장**을 눌렀습니다. 새 작업 파일 경로를 같은 Claude 대화에 명시해 반영을 요청했습니다.
+- Claude는 설치된 runner로 `status → checkout → 후보 파일 수정 → apply → status`를 수행했습니다. 편집기는 수동 새로고침 없이 새 제목으로 갱신됐고 메모 목록에 **전체 1 · 완료 1 · 미완료 0**이 표시됐습니다.
+- 별도 `verify.mjs` 검사 통과: 두 원본의 해시 보존, 첫 작업 파일의 저장 이후 바이트 보존, 두 번째 제목 변경, 스타일 보존, 메모 ID·내용·대상·위치 관계·대상 요약 보존, 완료 상태 변경, 반영 직전 작업 파일과 백업의 바이트 일치.
+
+로컬 증거는 같은 테스트 폴더의 `SHA256SUMS`, `before-ai.review.html`, `first-saved.sha256`, `verify.mjs`, `verification.json`, `before-ai.png`, `after-ai.png`에 보관했습니다. 이번 검증은 Windows의 Claude Code Remote Control과 공개 HTMLEdit 1.2.0의 한 문서 전환 흐름에 한정합니다. 독립 클라우드 세션, 다른 운영체제의 파일 선택 창, Codex CLI의 실제 AI 반영 검증으로 확대 해석하지 않습니다.
