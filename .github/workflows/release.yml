@@ -4,11 +4,15 @@ on:
     tags:
       - 'v*'
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -20,23 +24,40 @@ jobs:
           node -e "const [a,b,c]=require('child_process').execSync('npm --version').toString().trim().split('.').map(Number);process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" || npm install -g npm@latest
           npm --version
       - name: Check that the tag matches the package version
-        run: node -e "const v=require('./package.json').version;if(process.env.GITHUB_REF_NAME!=='v'+v){console.error('Tag '+process.env.GITHUB_REF_NAME+' does not match package version '+v);process.exit(1)}"
+        id: version
+        run: |
+          node -e "const v=require('./package.json').version;if(process.env.GITHUB_REF_NAME!=='v'+v){console.error('Tag '+process.env.GITHUB_REF_NAME+' does not match package version '+v);process.exit(1)}"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - run: npm ci
       - run: npm run build
       - run: npm test
       - name: Publish to npm (directory publish, OIDC trusted publishing, automatic provenance)
         run: npm publish
-      - name: Create the GitHub release from the published tarball
+  release:
+    # Separate job so a failed release step can be rerun without republishing.
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Download the published tarball from the registry
         env:
-          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.publish.outputs.version }}
         run: |
-          version="$(node -p "require('./package.json').version")"
           mkdir release && cd release
-          for attempt in 1 2 3 4 5 6; do
-            if npm pack "@woody_s/htmledit@${version}" --ignore-scripts; then break; fi
-            if [ "$attempt" = 6 ]; then exit 1; fi
-            sleep 10
+          # Registry propagation can take a few minutes after publish.
+          for attempt in $(seq 1 24); do
+            if npm pack "@woody_s/htmledit@${VERSION}" --ignore-scripts; then break; fi
+            if [ "$attempt" = 24 ]; then echo "Version ${VERSION} not visible after 6 minutes"; exit 1; fi
+            sleep 15
           done
           sha256sum *.tgz > SHA256SUMS
           cat SHA256SUMS
-          gh release create "$GITHUB_REF_NAME" *.tgz SHA256SUMS --title "HTMLEdit ${version}" --generate-notes
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: gh release create "$GITHUB_REF_NAME" release/*.tgz release/SHA256SUMS --repo "$GITHUB_REPOSITORY" --title "HTMLEdit ${VERSION}" --generate-notes --verify-tag
