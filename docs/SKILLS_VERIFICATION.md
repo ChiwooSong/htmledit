@@ -185,7 +185,7 @@ npm run format:check
 
 ## 1.3.0 multilingual candidate verification (2026-10-13)
 
-**Implementation, automated validation, and actual Codex and Claude workflows passed. Claude completed the follow-up using user-selected manual approval mode. This is a local 1.3.0 candidate, not a published release.** Historical verification sections above retain their original language and results.
+**Implementation, automated validation, and actual Codex and Claude workflows passed. Claude completed the follow-up using user-selected manual approval mode. Version 1.3.0 was subsequently published on 2026-10-14 KST; the publication receipt is below.** Historical verification sections above retain their original language and results.
 
 ### Scope and automated evidence
 
@@ -237,8 +237,18 @@ Automated checks verified dictionary completeness, interpolation parity, Unicode
 
 Windows Chrome/Edge remain the supported environment. Windows picker title/filter strings are localized; native OS button labels follow Windows settings. No macOS/Linux support claim is added. The Vite build reports a non-fatal size advisory for the bundle containing all five dictionaries (about 562 kB minified, 169 kB gzip).
 
-The planned local implementation and functional validation are complete, including both actual AI workflows. No GitHub push, tag, or npm publish was performed in this implementation task. When release is requested, use main CI → `v1.3.0` tag push → trusted publishing → npm/GitHub artifact verification. Never publish locally with `npm publish`.
+The planned local implementation and functional validation were completed, including both actual AI workflows, before publication was authorized. The release follows main CI → `v1.3.0` tag push → trusted publishing → npm/GitHub artifact verification. Never publish locally with `npm publish`.
 
 ### Release preparation (2026-10-14 KST)
 
 The user authorized publication after the successful Claude follow-up. The first [main CI run](https://github.com/ChiwooSong/htmledit/actions/runs/38419659824) passed build, formatting, unit tests, and 81 of 82 browser cases. One preference-persistence test attempted its first file read before the asynchronous initial save created `preferences.json`. Its poll now treats only `ENOENT` as not-yet-ready and still requires the exact saved language; other errors propagate. The focused case passed three times per browser (6/6). Application code and validation assertions were unchanged. Publication remains gated on the complete main CI run after this test correction.
+
+### 1.3.0 publication receipt (2026-10-14 KST)
+
+- Release commit: `67fe74e753ae3e9ef11e6650d21e17151694cb33`. The [main Windows CI](https://github.com/ChiwooSong/htmledit/actions/runs/38420823868) passed build, formatting, 51 unit tests, 82 Chrome/Edge browser tests, and packaged installation/workflow validation before the `v1.3.0` tag was pushed.
+- The [tag-triggered Release workflow](https://github.com/ChiwooSong/htmledit/actions/runs/38421665331) passed both publish and release jobs. Publication used GitHub Actions OIDC trusted publishing; no local `npm publish` was used.
+- Registry metadata confirmed `@woody_s/htmledit@1.3.0`, `latest: 1.3.0`, and `_npmUser.name: GitHub Actions` with a GitHub trusted publisher. The provenance statement identifies `.github/workflows/release.yml`, `refs/tags/v1.3.0`, the exact release commit, and this Actions run.
+- The [GitHub release](https://github.com/ChiwooSong/htmledit/releases/tag/v1.3.0) contains `woody_s-htmledit-1.3.0.tgz` and `SHA256SUMS`. Independently downloaded GitHub and npm tarballs were byte-identical, and the registry SHA-1/SHA-512 integrity values and attached SHA-256 checksum matched.
+- Tarball SHA-256: `8257155910d31a903f4630c8c3e4718a0873c8c4b128738ee83dedf12c79beba`.
+
+Local publication evidence is in `.cache/release-1.3.0-published/`: `published-verification.json`, `registry-metadata.json`, `attestations.json`, the registry-matched release tarball, and `SHA256SUMS`. This receipt is a post-release documentation update; the published package and tag remain tied to the release commit above.
