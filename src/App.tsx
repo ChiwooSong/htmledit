@@ -86,6 +86,8 @@ export default function App() {
   const [localDraft, setLocalDraft] = useState<LocalDraft | null>(null);
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  const copyingRef = useRef(false);
+  const [copying, setCopying] = useState(false);
   const [opening, setOpening] = useState(false);
   const openingRef = useRef(false);
   const leavingRef = useRef(false);
@@ -135,6 +137,11 @@ export default function App() {
   const selected = selectedId ? elementMap.get(selectedId) : undefined;
   const openCount = session?.notes.filter((note) => !note.done).length ?? 0;
   const dirty = session ? JSON.stringify(session) !== savedSignature.current : false;
+  const handoffText = session
+    ? connected
+      ? `HTMLEdit 작업 파일 ${connected.file}의 미완료 메모를 반영해줘. htmledit 스킬의 checkout/apply 절차로 수정하고 완료한 메모만 표시해줘.`
+      : handoffMessage(session)
+    : '';
   const pendingInput = useRef(false);
   pendingInput.current = Boolean(noteText || Object.keys(textEdits).length);
   const notify = useCallback((text: string, error = false) => setToast({ text, error }), []);
@@ -511,21 +518,40 @@ export default function App() {
     else void chooseLocalDocument(false);
   };
   const copy = async () => {
-    if (!session) return;
+    if (!session || copyingRef.current || savingRef.current || openingRef.current) return;
+    if (pendingInput.current || document.querySelector('[aria-label="문구 직접 편집"]')) {
+      notify('작성 중인 문구나 메모를 먼저 적용하거나 취소한 뒤 AI 요청을 복사해 주세요.', true);
+      return;
+    }
+    if (session.metadataIssue || conflict || (token && !connected)) return;
+    copyingRef.current = true;
+    setCopying(true);
+    const signature = JSON.stringify(session);
     try {
-      await navigator.clipboard.writeText(
-        connected
-          ? `HTMLEdit 작업 파일 ${connected.file}의 미완료 메모를 반영해줘. htmledit 스킬의 checkout/apply 절차로 수정하고 완료한 메모만 표시해줘.`
-          : handoffMessage(session),
-      );
+      if (!(await save('review'))) return;
+      if (
+        JSON.stringify(sessionRef.current) !== signature ||
+        pendingInput.current ||
+        document.querySelector('[aria-label="문구 직접 편집"]')
+      ) {
+        notify('저장 중 작업이 변경됐습니다. 변경을 적용한 뒤 AI 요청을 다시 복사해 주세요.', true);
+        return;
+      }
+      await navigator.clipboard.writeText(handoffText);
       notify(
         connected
-          ? 'AI에게 보낼 요청을 복사했습니다. 작업 파일 저장 후 대화에 붙여넣으세요.'
-          : 'AI에게 보낼 설명을 복사했습니다. 전달용 HTML을 함께 첨부해 주세요.',
+          ? '작업 파일을 저장하고 AI 요청을 복사했습니다. AI 대화에 붙여넣으세요.'
+          : '전달용 HTML 다운로드를 시작하고 AI 요청을 복사했습니다. 파일을 함께 첨부해 주세요.',
       );
     } catch {
-      notify('설명을 자동 복사하지 못했습니다. 사용 방법에서 전달 문구를 확인해 주세요.', true);
+      notify(
+        '작업은 저장됐지만 자동 복사하지 못했습니다. 사용 방법에서 전달 문구를 복사해 주세요.',
+        true,
+      );
       setHelp(true);
+    } finally {
+      copyingRef.current = false;
+      setCopying(false);
     }
   };
   const editNote = (note: Note) => {
@@ -641,7 +667,7 @@ export default function App() {
         <button
           className="button"
           onClick={openAnotherDocument}
-          disabled={reading || opening || saving || (Boolean(token) && !connected)}
+          disabled={reading || opening || saving || copying || (Boolean(token) && !connected)}
         >
           <FolderOpen size={16} />
           {reading ? '불러오는 중…' : token ? '다른 문서 열기' : 'HTML 열기'}
@@ -706,7 +732,7 @@ export default function App() {
         <div className="toolbar-spacer" />
         <button
           className="button secondary"
-          disabled={!session || Boolean(session.metadataIssue)}
+          disabled={!session || Boolean(session.metadataIssue) || copying}
           onClick={() => save('clean')}
         >
           <Download size={15} />
@@ -714,7 +740,7 @@ export default function App() {
         </button>
         <button
           className="button primary"
-          disabled={!session || Boolean(session.metadataIssue) || saving || conflict}
+          disabled={!session || Boolean(session.metadataIssue) || saving || copying || conflict}
           onClick={() => save('review')}
         >
           <Sparkles size={15} />
@@ -1349,14 +1375,25 @@ export default function App() {
               )}
             </div>
             <div className="sidebar-footer">
-              <button className="button full-width" onClick={() => void copy()}>
+              <button
+                className="button full-width"
+                onClick={() => void copy()}
+                disabled={
+                  saving ||
+                  copying ||
+                  opening ||
+                  conflict ||
+                  Boolean(session.metadataIssue) ||
+                  (Boolean(token) && !connected)
+                }
+              >
                 <Copy size={14} />
-                AI에게 보낼 설명 복사
+                {copying ? '저장하고 복사 중…' : '저장하고 AI 요청 복사'}
               </button>
               <p>
                 {token
-                  ? '작업 파일 저장 후 AI 대화에 붙여넣으세요.'
-                  : '전달용 HTML을 설명과 함께 첨부하세요.'}
+                  ? '현재 수정과 메모를 저장한 뒤 요청을 복사합니다.'
+                  : '전달용 HTML을 내려받고 요청을 복사합니다. 파일도 함께 첨부하세요.'}
               </p>
             </div>
           </aside>
@@ -1477,8 +1514,9 @@ export default function App() {
               <li>
                 <strong>파일 하나로 AI에게 전달하세요.</strong>
                 <p>
-                  ‘AI 전달용 저장’으로 HTML을 저장하고, 복사한 설명과 함께 AI에게 첨부하세요. 메모는
-                  편집기에 다시 열어 확인합니다.
+                  {token
+                    ? '‘저장하고 AI 요청 복사’를 누르면 현재 수정과 메모가 작업 파일에 저장됩니다. 복사한 요청을 AI 대화에 붙여넣으세요. AI가 반영한 결과는 열린 편집기에 자동으로 표시됩니다.'
+                    : '‘저장하고 AI 요청 복사’를 누르면 메모를 포함한 HTML을 내려받고 요청을 복사합니다. 파일과 요청을 함께 AI에게 전달하세요.'}
                 </p>
               </li>
             </ol>
@@ -1491,7 +1529,7 @@ export default function App() {
                 className="handoff-text"
                 aria-label="AI 전달 설명"
                 readOnly
-                value={handoffMessage(session)}
+                value={handoffText}
               />
             )}
             <button className="button primary" onClick={() => setHelp(false)}>

@@ -381,7 +381,15 @@ test('AI 전달 설명 복사와 메모 필터가 작동한다', async ({ page, 
   await expect(page.getByTestId('note-card')).toHaveCount(0);
   await page.locator('.note-filters').getByRole('button', { name: '완료', exact: true }).click();
   await expect(page.getByTestId('note-card')).toHaveCount(1);
-  await page.getByRole('button', { name: 'AI에게 보낼 설명 복사', exact: true }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: '저장하고 AI 요청 복사', exact: true }).click();
+  const saved = await downloadPromise;
+  expect(saved.suggestedFilename()).toBe('sample.review.html');
+  const exported = readDocument(
+    await readFile((await saved.path())!, 'utf8'),
+    'sample.review.html',
+  );
+  expect(exported.notes[0]).toMatchObject({ text: '완료 필터 요청', done: true });
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain('sample.review.html');
   expect(copied).toContain('targetId');
