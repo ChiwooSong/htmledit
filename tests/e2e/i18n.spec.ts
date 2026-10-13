@@ -179,7 +179,15 @@ test('connected language survives a new port; preference failures keep unsaved w
     await page.goto(servers[0].url);
     await page.getByTestId('language-select').selectOption('es');
     await expect
-      .poll(async () => JSON.parse(await readFile(preferencesFile, 'utf8')).language)
+      .poll(async () => {
+        try {
+          return JSON.parse(await readFile(preferencesFile, 'utf8')).language;
+        } catch (error) {
+          // The first preference save is asynchronous; absence means keep waiting.
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+          throw error;
+        }
+      })
       .toBe('es');
     await page.goto(servers[1].url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');

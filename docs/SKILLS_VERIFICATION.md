@@ -238,3 +238,7 @@ Automated checks verified dictionary completeness, interpolation parity, Unicode
 Windows Chrome/Edge remain the supported environment. Windows picker title/filter strings are localized; native OS button labels follow Windows settings. No macOS/Linux support claim is added. The Vite build reports a non-fatal size advisory for the bundle containing all five dictionaries (about 562 kB minified, 169 kB gzip).
 
 The planned local implementation and functional validation are complete, including both actual AI workflows. No GitHub push, tag, or npm publish was performed in this implementation task. When release is requested, use main CI → `v1.3.0` tag push → trusted publishing → npm/GitHub artifact verification. Never publish locally with `npm publish`.
+
+### Release preparation (2026-10-14 KST)
+
+The user authorized publication after the successful Claude follow-up. The first [main CI run](https://github.com/ChiwooSong/htmledit/actions/runs/38419659824) passed build, formatting, unit tests, and 81 of 82 browser cases. One preference-persistence test attempted its first file read before the asynchronous initial save created `preferences.json`. Its poll now treats only `ENOENT` as not-yet-ready and still requires the exact saved language; other errors propagate. The focused case passed three times per browser (6/6). Application code and validation assertions were unchanged. Publication remains gated on the complete main CI run after this test correction.
