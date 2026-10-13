@@ -15,3 +15,19 @@ export const EXAMPLE_HTML = `<!doctype html>
 <section class="contact" id="contact"><div><h2>새로운 공간을 함께 그려볼까요?</h2><p>당신의 첫 번째 이야기를 들려주세요.</p></div><a class="cta" href="mailto:hello@example.com">프로젝트 문의 ↗</a></section>
 </main><footer><span>© 2026 ONYU STUDIO</span><span>Made for the way you live.</span></footer>
 </body></html>`;
+
+import { exampleTranslations } from './i18n/examples';
+import type { Locale } from './i18n';
+export function exampleHtml(locale: Locale): string {
+  if (locale === 'ko') return EXAMPLE_HTML;
+  const dictionary = exampleTranslations[locale];
+  // Translate only this bundled fixture, never an opened user document.
+  const pattern = Object.keys(dictionary)
+    .sort((a, b) => b.length - a.length)
+    .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  return EXAMPLE_HTML.replace(
+    new RegExp(pattern, 'g'),
+    (match) => dictionary[match as keyof typeof dictionary],
+  ).replace('lang="ko"', 'lang="' + locale + '"');
+}

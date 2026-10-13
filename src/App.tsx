@@ -1,3 +1,5 @@
+import { useLocale, LanguageSelect } from './i18n/react';
+import { message, MessageError, describeError, type DisplayMessage } from './i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -31,7 +33,7 @@ import {
   Hand,
 } from 'lucide-react';
 import Preview from './components/Preview';
-import { EXAMPLE_HTML } from './example';
+import { exampleHtml } from './example';
 import {
   addNote,
   changeStyle,
@@ -73,15 +75,16 @@ function rgbToHex(color: string) {
     ? `#${rgb.map((n) => Math.round(n).toString(16).padStart(2, '0')).join('')}`
     : '#343e33';
 }
-const time = (value: number) =>
-  new Date(value).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
 export default function App() {
+  const { t, format, locale } = useLocale();
   const [token] = useState(connectionToken);
   const [connected, setConnected] = useState<LocalDocument | null>(null);
   const connectedRef = useRef(connected);
   connectedRef.current = connected;
-  const [connectionStatus, setConnectionStatus] = useState(token ? '작업 파일에 연결 중…' : '');
+  const [connectionStatus, setConnectionStatus] = useState<DisplayMessage>(
+    token ? message('connectingToTheWorkingFile') : '',
+  );
   const [conflict, setConflict] = useState(false);
   const [localDraft, setLocalDraft] = useState<LocalDraft | null>(null);
   const savingRef = useRef(false);
@@ -110,15 +113,15 @@ export default function App() {
   const [fontSize, setFontSize] = useState('16');
   const [textEdits, setTextEdits] = useState<Record<number, string>>({});
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [draftStatus, setDraftStatus] = useState('임시 저장 준비');
-  const [exportStatus, setExportStatus] = useState('HTML 저장 전');
-  const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
+  const [draftStatus, setDraftStatus] = useState<DisplayMessage>(message('draftReady'));
+  const [exportStatus, setExportStatus] = useState<DisplayMessage>(message('htmlNotSavedYet'));
+  const [toast, setToast] = useState<{ text: DisplayMessage; error?: boolean } | null>(null);
   const [modal, setModal] = useState<{
-    title: string;
-    message: string;
-    action: string;
+    title: DisplayMessage;
+    message: DisplayMessage;
+    action: DisplayMessage;
     run: () => void;
-    secondary?: { label: string; run: () => void };
+    secondary?: { label: DisplayMessage; run: () => void };
   } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [help, setHelp] = useState(false);
@@ -139,12 +142,15 @@ export default function App() {
   const dirty = session ? JSON.stringify(session) !== savedSignature.current : false;
   const handoffText = session
     ? connected
-      ? `HTMLEdit 작업 파일 ${connected.file}의 미완료 메모를 반영해줘. htmledit 스킬의 checkout/apply 절차로 수정하고 완료한 메모만 표시해줘.`
-      : handoffMessage(session)
+      ? t('connectedHandoff', { file: connected.file })
+      : handoffMessage(session, locale)
     : '';
   const pendingInput = useRef(false);
   pendingInput.current = Boolean(noteText || Object.keys(textEdits).length);
-  const notify = useCallback((text: string, error = false) => setToast({ text, error }), []);
+  const notify = useCallback(
+    (text: DisplayMessage, error = false) => setToast({ text, error }),
+    [],
+  );
   const change = useCallback(
     (transform: (current: DocumentSession) => DocumentSession) => {
       const current = sessionRef.current;
@@ -157,7 +163,10 @@ export default function App() {
         setHistory((h) => (h ? commit(h, next) : h));
         return true;
       } catch (error) {
-        notify(error instanceof Error ? error.message : '변경을 적용하지 못했습니다.', true);
+        notify(
+          error instanceof Error ? describeError(error) : message('couldNotApplyTheChange'),
+          true,
+        );
         return false;
       }
     },
@@ -167,13 +176,13 @@ export default function App() {
     if (token) return;
     loadDraft()
       .then(setDraft)
-      .catch(() => setDraftStatus('임시 저장 공간을 읽을 수 없습니다'));
+      .catch(() => setDraftStatus(message('couldNotReadDraftStorage')));
   }, []);
   useEffect(() => {
     const generation = ++autosaveGeneration.current;
     if (!session) return;
     if (token && JSON.stringify(session) === savedSignature.current) return;
-    setDraftStatus('임시 저장 중…');
+    setDraftStatus(message('savingDraft'));
     const timer = window.setTimeout(() => {
       const connection = connectedRef.current;
       const persist =
@@ -190,13 +199,13 @@ export default function App() {
       persist
         .then((savedAt) => {
           if (generation === autosaveGeneration.current) {
-            setDraftStatus(`임시 저장 ${time(savedAt)}`);
+            setDraftStatus(message('draftSavedAt', { time: savedAt }));
             setDraft({ session, savedAt });
           }
         })
         .catch(() => {
           if (generation === autosaveGeneration.current)
-            setDraftStatus('임시 저장 실패 · HTML 파일을 저장해 주세요');
+            setDraftStatus(message('draftSaveFailedSaveAnHtmlFile'));
         });
     }, 600);
     return () => clearTimeout(timer);
@@ -248,7 +257,7 @@ export default function App() {
     setNoteText('');
     setMode('select');
     setTab('edit');
-    setExportStatus('HTML 저장 전');
+    setExportStatus(message('htmlNotSavedYet'));
     savedSignature.current = recovered ? '' : JSON.stringify(next);
   };
   const acceptLocal = (value: LocalDocument) => {
@@ -256,8 +265,8 @@ export default function App() {
     setConnected(value);
     openSession(readDocument(value.html, value.fileName));
     setConflict(false);
-    setConnectionStatus('작업 파일 연결됨');
-    setExportStatus('작업 파일과 동기화됨');
+    setConnectionStatus(message('workingFileConnected'));
+    setExportStatus(message('syncedWithWorkingFile'));
   };
   const acceptLocalRef = useRef(acceptLocal);
   acceptLocalRef.current = acceptLocal;
@@ -278,7 +287,10 @@ export default function App() {
         )
           setLocalDraft(stored);
       } catch (error) {
-        if (!disposed) setConnectionStatus(error instanceof Error ? error.message : '연결 실패');
+        if (!disposed)
+          setConnectionStatus(
+            error instanceof Error ? describeError(error) : message('connectionFailed'),
+          );
       }
     };
     void initial();
@@ -302,7 +314,7 @@ export default function App() {
             JSON.stringify(sessionRef.current) !== savedSignature.current
           ) {
             setConflict(true);
-            setConnectionStatus('외부 변경 발견 · 내 작업을 보존한 뒤 다시 열어 주세요');
+            setConnectionStatus(message('externalChangesDetectedSaveYourEditsSeparately'));
           } else {
             const value = await localRequest<LocalDocument>(token, 'document');
             if (
@@ -314,10 +326,9 @@ export default function App() {
             )
               acceptLocalRef.current(value);
           }
-        } else setConnectionStatus('작업 파일 연결됨');
+        } else setConnectionStatus(message('workingFileConnected'));
       } catch {
-        if (!disposed)
-          setConnectionStatus('서버 연결 끊김 · 파일을 다시 열거나 현재 작업을 다운로드하세요');
+        if (!disposed) setConnectionStatus(message('disconnectedReopenTheFileOrDownloadYour'));
       } finally {
         polling = false;
       }
@@ -338,31 +349,32 @@ export default function App() {
       }).catch(() => {});
       setLocalDraft(null);
     } catch (error) {
-      notify(error instanceof Error ? error.message : '다시 열기 실패', true);
+      notify(
+        error instanceof Error ? describeError(error) : message('couldNotReopenTheFile'),
+        true,
+      );
     }
   };
   const replaceSession = (next: DocumentSession) => {
     if (session && dirty)
       setModal({
-        title: '다른 문서를 여시겠어요?',
-        message:
-          '현재 작업을 파일로 저장했는지 확인해 주세요. 새 문서는 최근 임시 작업을 대체합니다.',
-        action: '문서 열기',
+        title: message('openAnotherDocument'),
+        message: message('makeSureYouSavedYourWorkTo'),
+        action: message('openDocument'),
         run: () => openSession(next),
       });
     else if (!session && draft)
       setModal({
-        title: '최근 임시 작업을 대체할까요?',
-        message:
-          '아직 복구하지 않은 임시 작업이 있습니다. 새 문서를 열면 최근 임시 작업이 대체됩니다.',
-        action: '새 문서 열기',
+        title: message('replaceTheLatestDraft'),
+        message: message('thereIsADraftYouHaveNot'),
+        action: message('openNewDocument'),
         run: () => openSession(next),
       });
     else openSession(next);
   };
   const openFile = async (file: File) => {
     if (token) {
-      notify('연결 모드에서는 상단의 ‘다른 문서 열기’로 파일을 선택해 주세요.', true);
+      notify(message('useOpenAnotherDocumentInTheToolbar'), true);
       return;
     }
     if (reading) return;
@@ -370,7 +382,7 @@ export default function App() {
     try {
       replaceSession(readDocument(await readHtmlFile(file), file.name));
     } catch (error) {
-      notify(error instanceof Error ? error.message : '파일을 열 수 없습니다.', true);
+      notify(error instanceof Error ? describeError(error) : message('couldNotOpenTheFile'), true);
     } finally {
       setReading(false);
     }
@@ -408,7 +420,7 @@ export default function App() {
     setNoteText('');
     setEditingNoteId(null);
     setRelation('self');
-    notify('수정 요청을 저장했습니다.');
+    notify(message('noteSaved'));
   };
   const save = async (kind: 'review' | 'clean', downloadOnly = false) => {
     if (!session) return false;
@@ -431,18 +443,20 @@ export default function App() {
         }).catch(() => {});
         setConflict(false);
         setLocalDraft(null);
-        setExportStatus(`작업 파일 저장 ${time(Date.now())}`);
-        notify('작업 파일을 저장했습니다. AI 대화에 “메모 반영해줘”라고 요청하세요.');
+        setExportStatus(message('workingSavedAt', { time: Date.now() }));
+        notify(message('workingFileSavedAskYourAiTo'));
         return true;
       }
       downloadHtml(exportDocument(session, kind), exportName(session.fileName, kind));
       if (!token) savedSignature.current = JSON.stringify(session);
-      setExportStatus(`${kind === 'review' ? 'AI 전달용' : '완성본'} 저장 ${time(Date.now())}`);
-      notify(`${exportName(session.fileName, kind)} 파일을 저장했습니다.`);
+      setExportStatus(
+        message(kind === 'review' ? 'reviewSavedAt' : 'finalSavedAt', { time: Date.now() }),
+      );
+      notify(message('fileSaved', { file: exportName(session.fileName, kind) }));
       return true;
     } catch (error) {
       if (error instanceof ConnectionError && error.code === 'CONFLICT') setConflict(true);
-      notify(error instanceof Error ? error.message : '저장하지 못했습니다.', true);
+      notify(error instanceof Error ? describeError(error) : message('couldNotSave'), true);
       return false;
     } finally {
       savingRef.current = false;
@@ -457,12 +471,12 @@ export default function App() {
       if (saveFirst && !(await save('review'))) return;
       const result = await localRequest<{ url: string } | null>(token, 'open-document', 'POST', {});
       if (!result) {
-        notify('파일 선택을 취소했습니다. 현재 문서를 계속 편집할 수 있습니다.');
+        notify(message('fileSelectionCancelledYouCanKeepEditing'));
         return;
       }
       const url = new URL(result.url);
       if (url.origin === location.origin) {
-        notify('현재 편집 중인 문서입니다. 작업을 그대로 유지합니다.');
+        notify(message('thisDocumentIsAlreadyOpenYourWork'));
         return;
       }
       if (
@@ -472,7 +486,7 @@ export default function App() {
         url.password ||
         !/^#htmledit=[a-f0-9]{64}$/.test(url.hash)
       )
-        throw new Error('새 문서 연결 주소를 확인할 수 없습니다.');
+        throw new MessageError(message('couldNotVerifyTheNewDocumentConnection'));
       // Persist a recovery copy before leaving, including on the discard path.
       // A picker cancellation or failure never clears the current history.
       const current = sessionRef.current;
@@ -487,9 +501,7 @@ export default function App() {
     } catch (error) {
       leavingRef.current = false;
       notify(
-        error instanceof Error
-          ? error.message
-          : '새 문서를 열지 못했습니다. 현재 작업은 유지됩니다.',
+        error instanceof Error ? describeError(error) : message('couldNotOpenTheNewDocumentYour'),
         true,
       );
     } finally {
@@ -502,25 +514,27 @@ export default function App() {
       fileInput.current?.click();
       return;
     }
-    if (pendingInput.current || document.querySelector('[aria-label="문구 직접 편집"]')) {
-      notify('작성 중인 문구나 메모를 먼저 적용하거나 취소한 뒤 다른 문서를 열어 주세요.', true);
+    if (pendingInput.current || document.querySelector('[data-htmledit-inline-editor]')) {
+      notify(message('applyOrCancelTheTextOrNote'), true);
       return;
     }
     if (dirty)
       setModal({
-        title: '현재 작업을 저장할까요?',
-        message:
-          '아직 작업 파일에 저장하지 않은 변경이 있습니다. 저장 여부를 선택한 다음 Windows 파일 선택 창에서 다른 HTML을 고르세요. 파일 선택을 취소하면 현재 문서는 유지됩니다.',
-        action: '저장 후 문서 선택',
+        title: message('saveYourCurrentWork'),
+        message: message('thereAreUnsavedChangesChooseWhetherTo'),
+        action: message('saveAndChooseDocument'),
         run: () => void chooseLocalDocument(true),
-        secondary: { label: '저장하지 않고 문서 선택', run: () => void chooseLocalDocument(false) },
+        secondary: {
+          label: message('chooseWithoutSaving'),
+          run: () => void chooseLocalDocument(false),
+        },
       });
     else void chooseLocalDocument(false);
   };
   const copy = async () => {
     if (!session || copyingRef.current || savingRef.current || openingRef.current) return;
-    if (pendingInput.current || document.querySelector('[aria-label="문구 직접 편집"]')) {
-      notify('작성 중인 문구나 메모를 먼저 적용하거나 취소한 뒤 AI 요청을 복사해 주세요.', true);
+    if (pendingInput.current || document.querySelector('[data-htmledit-inline-editor]')) {
+      notify(message('applyOrCancelTheTextOrNote34'), true);
       return;
     }
     if (session.metadataIssue || conflict || (token && !connected)) return;
@@ -532,22 +546,19 @@ export default function App() {
       if (
         JSON.stringify(sessionRef.current) !== signature ||
         pendingInput.current ||
-        document.querySelector('[aria-label="문구 직접 편집"]')
+        document.querySelector('[data-htmledit-inline-editor]')
       ) {
-        notify('저장 중 작업이 변경됐습니다. 변경을 적용한 뒤 AI 요청을 다시 복사해 주세요.', true);
+        notify(message('yourWorkChangedWhileSavingApplyThe'), true);
         return;
       }
       await navigator.clipboard.writeText(handoffText);
       notify(
         connected
-          ? '작업 파일을 저장하고 AI 요청을 복사했습니다. AI 대화에 붙여넣으세요.'
-          : '전달용 HTML 다운로드를 시작하고 AI 요청을 복사했습니다. 파일을 함께 첨부해 주세요.',
+          ? message('workingFileSavedAndAiRequestCopied')
+          : message('reviewHtmlDownloadStartedAndAiRequest'),
       );
     } catch {
-      notify(
-        '작업은 저장됐지만 자동 복사하지 못했습니다. 사용 방법에서 전달 문구를 복사해 주세요.',
-        true,
-      );
+      notify(message('yourWorkWasSavedButCopyingFailed'), true);
       setHelp(true);
     } finally {
       copyingRef.current = false;
@@ -578,18 +589,17 @@ export default function App() {
   const removeSelected = () => {
     if (!selected) return;
     setModal({
-      title: '선택한 요소를 삭제할까요?',
-      message: `〈${selected.tag}〉 ${selected.excerpt || '선택 영역'}와 그 안의 내용이 삭제됩니다. 연결된 메모는 유지되며 실행 취소로 복원할 수 있습니다.`,
-      action: '요소 삭제',
+      title: message('deleteTheSelectedElement'),
+      message: message('deleteElementDetails', { tag: selected.tag, excerpt: selected.excerpt }),
+      action: message('deleteElement'),
       run: () => change((current) => deleteElement(current, selected.id)),
     });
   };
   const discardBadMetadata = () =>
     setModal({
-      title: '읽을 수 없는 메모를 제외할까요?',
-      message:
-        '불러온 원본 파일을 보관해 주세요. 문서 디자인과 내용은 유지하며, 읽을 수 없는 메모를 제외한 새 파일을 저장할 수 있게 됩니다.',
-      action: '메모 제외',
+      title: message('excludeUnreadableNotes'),
+      message: message('keepTheOriginalFileThisPreservesIts'),
+      action: message('excludeNotes'),
       run: () => change((current) => ({ ...current, metadataIssue: undefined })),
     });
 
@@ -608,7 +618,7 @@ export default function App() {
         event.preventDefault();
         setDragOver(false);
         const files = event.dataTransfer.files;
-        if (files.length !== 1) notify('HTML 파일 한 개를 놓아 주세요.', true);
+        if (files.length !== 1) notify(message('dropOneHtmlFile'), true);
         else void openFile(files[0]);
       }}
     >
@@ -638,10 +648,13 @@ export default function App() {
           try {
             const data = await readImageFile(file);
             if (sessionRef.current !== captured)
-              throw new Error('문서가 변경되었습니다. 이미지를 다시 선택해 주세요.');
+              throw new MessageError(message('theDocumentChangedSelectTheImageAgain'));
             change((current) => replaceImage(current, id, data));
           } catch (error) {
-            notify(error instanceof Error ? error.message : '이미지를 교체하지 못했습니다.', true);
+            notify(
+              error instanceof Error ? describeError(error) : message('couldNotReplaceTheImage'),
+              true,
+            );
           }
         }}
       />
@@ -652,15 +665,17 @@ export default function App() {
           </span>
           <span>
             HTML<span className="logo-light">Edit</span>
-            <small>LOCAL WORKSPACE</small>
+            <small>{t('localWorkspace')}</small>
           </span>
         </div>
         <div className="header-center">
-          <span className="status-dot" />내 PC에서 편집
+          <span className="status-dot" />
+          {t('editOnYourComputer')}
         </div>
+        <LanguageSelect />
         <button className="help-button" onClick={() => setHelp(true)}>
           <CircleHelp size={16} />
-          사용 방법
+          {t('howToUse')}
         </button>
       </header>
       <div className="toolbar">
@@ -670,10 +685,10 @@ export default function App() {
           disabled={reading || opening || saving || copying || (Boolean(token) && !connected)}
         >
           <FolderOpen size={16} />
-          {reading ? '불러오는 중…' : token ? '다른 문서 열기' : 'HTML 열기'}
+          {reading ? t('loading') : token ? t('openAnotherDocument50') : t('openHtml')}
         </button>
         <span className="toolbar-divider" />
-        <div className="mode-switch" aria-label="편집 모드">
+        <div className="mode-switch" aria-label={t('editingMode')}>
           <button
             className={mode === 'interact' ? 'active' : ''}
             disabled={!session}
@@ -684,7 +699,7 @@ export default function App() {
             }}
           >
             <Hand size={15} />
-            문서 조작
+            {t('interact')}
           </button>
           <button
             className={mode === 'select' ? 'active' : ''}
@@ -695,7 +710,7 @@ export default function App() {
             }}
           >
             <MousePointer2 size={15} />
-            직접 편집
+            {t('editDirectly')}
           </button>
           <button
             className={mode === 'note' ? 'active' : ''}
@@ -706,14 +721,14 @@ export default function App() {
             }}
           >
             <MessageSquarePlus size={15} />
-            메모 남기기
+            {t('addNotes')}
           </button>
         </div>
         <div className="history-controls">
           <button
             className="icon-button"
-            aria-label="실행 취소"
-            title="실행 취소 Ctrl+Z"
+            aria-label={t('undo')}
+            title={t('undoCtrlZ')}
             disabled={!history?.past.length}
             onClick={() => setHistory((h) => (h ? undo(h) : h))}
           >
@@ -721,8 +736,8 @@ export default function App() {
           </button>
           <button
             className="icon-button"
-            aria-label="다시 실행"
-            title="다시 실행 Ctrl+Shift+Z"
+            aria-label={t('redo')}
+            title={t('redoCtrlShiftZ')}
             disabled={!history?.future.length}
             onClick={() => setHistory((h) => (h ? redo(h) : h))}
           >
@@ -736,7 +751,7 @@ export default function App() {
           onClick={() => save('clean')}
         >
           <Download size={15} />
-          완성본 저장
+          {t('saveFinalHtml')}
         </button>
         <button
           className="button primary"
@@ -744,19 +759,19 @@ export default function App() {
           onClick={() => save('review')}
         >
           <Sparkles size={15} />
-          {token ? (saving ? '저장 중…' : '작업 파일 저장') : 'AI 전달용 저장'}
+          {token ? (saving ? t('saving') : t('saveWorkingFile')) : t('saveReviewHtml')}
         </button>
       </div>
       {token && (
         <div className={`connection-bar ${conflict ? 'conflict' : ''}`} role="status">
           <div>
-            <strong>{connectionStatus}</strong>
+            <strong>{format(connectionStatus)}</strong>
             {connected && <small title={connected.file}>{connected.file}</small>}
           </div>
           <div className="connection-actions">
             {session && (
               <button className="button" onClick={() => save('review', true)}>
-                내 작업 별도 저장
+                {t('saveMyEditsSeparately')}
               </button>
             )}
             {conflict && (
@@ -764,14 +779,14 @@ export default function App() {
                 className="button"
                 onClick={() =>
                   setModal({
-                    title: '디스크 버전을 다시 열까요?',
-                    message: '미저장 변경은 대체됩니다. 필요한 작업은 먼저 별도 파일로 저장하세요.',
-                    action: '디스크 버전 다시 열기',
+                    title: message('reopenTheDiskVersion'),
+                    message: message('unsavedChangesWillBeReplacedSaveAny'),
+                    action: message('reopenDiskVersion'),
                     run: () => void reloadLocal(),
                   })
                 }
               >
-                디스크 버전 다시 열기
+                {t('reopenDiskVersion')}
               </button>
             )}
             {localDraft && (
@@ -785,11 +800,11 @@ export default function App() {
                     setConnected({ ...connected, revision: localDraft.revision });
                     setLocalDraft(null);
                   } catch {
-                    notify('임시 작업을 복구할 수 없습니다.', true);
+                    notify(message('couldNotRestoreTheDraft'), true);
                   }
                 }}
               >
-                연결 작업 복구
+                {t('restoreConnectedDraft')}
               </button>
             )}
           </div>
@@ -799,37 +814,38 @@ export default function App() {
         <main className="welcome">
           <div className="welcome-label">
             <span />
-            FROM AI TO YOUR HANDS
+            {t('fromAi')}
           </div>
           <h1>
-            화면에서 고치고,
+            {t('editItOnScreen')}
             <br />
-            <span>메모로 전달하세요.</span>
+            <span>{t('passItOnWithNotes')}</span>
           </h1>
           <p className="welcome-intro">
-            AI가 만든 HTML, 이제 원하는 곳을 직접 짚어보세요.
+            {t('pointToExactlyWhatYouWantTo')}
             <br />
-            간단한 수정은 손으로, 다음 작업은 그 자리에 메모로.
+            {t('makeSmallEditsYourselfLeaveANote')}
           </p>
           <div className={`dropzone ${dragOver ? 'dragging' : ''}`}>
             <div className="upload-symbol">
               <Upload size={28} strokeWidth={1.5} />
             </div>
-            <h2>HTML 파일을 여기에 놓아주세요</h2>
-            <p>.html · .htm / 파일 하나로 시작합니다</p>
+            <h2>{t('dropYourHtmlFileHere')}</h2>
+            <p>{t('htmlHtmStartWithOneFile')}</p>
             <button className="button primary" onClick={() => fileInput.current?.click()}>
               <FolderOpen size={16} />
-              파일 선택
+              {t('chooseFile')}
             </button>
-            <small>문서 처리는 이 브라우저 안에서 이루어집니다.</small>
+            <small>{t('documentsAreProcessedInThisBrowser')}</small>
           </div>
           <button
             className="example-button"
-            onClick={() => replaceSession(readDocument(EXAMPLE_HTML, 'onyu-studio.html'))}
+            onClick={() => replaceSession(readDocument(exampleHtml(locale), 'onyu-studio.html'))}
           >
             <FileCode2 size={17} />
             <span>
-              파일이 없다면, <strong>예제 문서로 둘러보기</strong>
+              {t('noFileYet')}
+              <strong>{t('tryAnExampleDocument')}</strong>
             </span>
             <ChevronRight size={16} />
           </button>
@@ -837,36 +853,35 @@ export default function App() {
             <div className="draft-card">
               <RotateCcw size={18} />
               <div>
-                <strong>최근 임시 작업이 있어요</strong>
+                <strong>{t('youHaveARecentDraft')}</strong>
                 <span>
-                  {draft.session.fileName} · {new Date(draft.savedAt).toLocaleString('ko-KR')}
+                  {draft.session.fileName} · {new Date(draft.savedAt).toLocaleString(locale)}
                 </span>
               </div>
               <button
                 className="button"
                 onClick={() => {
                   openSession(draft.session, true);
-                  notify('최근 임시 작업을 복구했습니다.');
+                  notify(message('recentDraftRestored'));
                 }}
               >
-                복구하기
+                {t('restore')}
               </button>
               <button
                 className="icon-button"
-                aria-label="임시 작업 삭제"
+                aria-label={t('deleteDraft')}
                 onClick={() =>
                   setModal({
-                    title: '임시 작업을 삭제할까요?',
-                    message:
-                      '이 브라우저에 저장된 최근 임시 작업을 삭제합니다. 저장한 HTML 파일은 영향을 받지 않습니다.',
-                    action: '임시 작업 삭제',
+                    title: message('deleteTheDraft'),
+                    message: message('thisDeletesTheLatestDraftInThis'),
+                    action: message('deleteDraft'),
                     run: () => {
                       void deleteDraft()
                         .then(() => {
                           setDraft(null);
-                          notify('임시 작업을 삭제했습니다.');
+                          notify(message('draftDeleted'));
                         })
-                        .catch(() => notify('임시 작업을 삭제하지 못했습니다.', true));
+                        .catch(() => notify(message('couldNotDeleteTheDraft'), true));
                     },
                   })
                 }
@@ -875,24 +890,28 @@ export default function App() {
               </button>
             </div>
           )}
-          {!draft && draftStatus.includes('읽을 수') && (
-            <p className="error-text">{draftStatus} · HTML 파일로 작업을 보관해 주세요.</p>
-          )}
+          {!draft &&
+            typeof draftStatus !== 'string' &&
+            draftStatus.key === 'couldNotReadDraftStorage' && (
+              <p className="error-text">
+                {format(draftStatus)} {t('saveAnHtmlFileToKeepYour')}
+              </p>
+            )}
           <div className="welcome-steps">
             <span>
               <MousePointer2 size={17} />
-              <strong>직접 고치기</strong>
-              <small>문구와 이미지, 글자 스타일</small>
+              <strong>{t('editDirectly90')}</strong>
+              <small>{t('textImagesAndTypography')}</small>
             </span>
             <span>
               <MessageSquarePlus size={17} />
-              <strong>위치에 메모하기</strong>
-              <small>설명 대신, 원하는 곳을 짚어서</small>
+              <strong>{t('leaveNotesInContext')}</strong>
+              <small>{t('pointInsteadOfDescribingTheLocation')}</small>
             </span>
             <span>
               <Sparkles size={17} />
-              <strong>AI에게 전달하기</strong>
-              <small>수정 요청까지 담긴 HTML 하나</small>
+              <strong>{t('sendToYourAi')}</strong>
+              <small>{t('oneHtmlFileWithYourChangeRequests')}</small>
             </span>
           </div>
         </main>
@@ -903,30 +922,30 @@ export default function App() {
               <div className="document-name">
                 <FileCode2 size={16} />
                 <strong>{session.fileName}</strong>
-                {dirty && <span className="unsaved-dot" title="파일 저장 전 변경 내용" />}
+                {dirty && <span className="unsaved-dot" title={t('changesNotYetSavedToFile')} />}
               </div>
               <div className="viewport-switch">
                 <button
                   className={width === 'desktop' ? 'active' : ''}
                   onClick={() => setWidth('desktop')}
-                  aria-label="데스크톱 너비"
-                  title="데스크톱"
+                  aria-label={t('desktopWidth')}
+                  title={t('desktop')}
                 >
                   <Monitor size={15} />
                 </button>
                 <button
                   className={width === 'tablet' ? 'active' : ''}
                   onClick={() => setWidth('tablet')}
-                  aria-label="태블릿 너비"
-                  title="태블릿 768px"
+                  aria-label={t('tabletWidth')}
+                  title={t('tablet768px')}
                 >
                   <Tablet size={15} />
                 </button>
                 <button
                   className={width === 'mobile' ? 'active' : ''}
                   onClick={() => setWidth('mobile')}
-                  aria-label="모바일 너비"
-                  title="모바일 390px"
+                  aria-label={t('mobileWidth')}
+                  title={t('mobile390px')}
                 >
                   <Smartphone size={15} />
                 </button>
@@ -935,21 +954,19 @@ export default function App() {
             {session.metadataIssue && (
               <div className="metadata-alert">
                 <AlertTriangle size={16} />
-                <span>
-                  메모를 읽을 수 없습니다: {session.metadataIssue} 원본을 보관한 뒤 선택해 주세요.
-                </span>
-                <button onClick={discardBadMetadata}>읽을 수 없는 메모 제외</button>
+                <span>{t('metadataDetails', { detail: format(session.metadataIssue) })}</span>
+                <button onClick={discardBadMetadata}>{t('excludeUnreadableNotes105')}</button>
               </div>
             )}
             {session.warnings.length > 0 && (
               <details className="document-warnings">
                 <summary>
                   <Info size={14} />
-                  문서 표시 안내 {session.warnings.length}개
+                  {t('noticesCount', { count: session.warnings.length })}
                 </summary>
                 <ul>
                   {session.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
+                    <li key={JSON.stringify(warning)}>{format(warning)}</li>
                   ))}
                 </ul>
               </details>
@@ -974,23 +991,24 @@ export default function App() {
               <span>
                 <MousePointer2 size={13} />
                 {mode === 'interact'
-                  ? '메뉴·탭을 눌러 화면 이동 → 직접 편집 또는 메모 남기기'
+                  ? t('useMenusAndTabsThenChooseEdit')
                   : mode === 'select'
-                    ? '요소 클릭으로 선택 · 문구 더블클릭으로 수정'
-                    : '메모를 남길 요소를 클릭하세요'}
+                    ? t('clickToSelectDoubleClickTextTo')
+                    : t('clickTheElementYouWantToAnnotate')}
               </span>
               <span>
-                {width === 'desktop' ? '데스크톱' : width === 'tablet' ? '768 px' : '390 px'}
+                {width === 'desktop' ? t('desktop') : width === 'tablet' ? '768 px' : '390 px'}
               </span>
             </div>
           </section>
           <aside className="sidebar">
             <div className="sidebar-tabs">
               <button className={tab === 'edit' ? 'active' : ''} onClick={() => setTab('edit')}>
-                요소 편집
+                {t('elementEditor')}
               </button>
               <button className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
-                수정 메모 <span>{session.notes.length}</span>
+                {t('reviewNotes')}
+                <span>{session.notes.length}</span>
               </button>
             </div>
             <div className="sidebar-scroll">
@@ -998,30 +1016,30 @@ export default function App() {
                 <>
                   {selected ? (
                     <>
-                      <div className="section-caption">선택한 요소</div>
+                      <div className="section-caption">{t('selectedElement')}</div>
                       <div className="selected-card">
                         <span className="tag-name">{selected.tag}</span>
-                        <p>{selected.excerpt || '텍스트가 없는 요소'}</p>
+                        <p>{selected.excerpt || t('elementWithoutText')}</p>
                         <button
                           className="text-button"
                           disabled={!selected.parentId}
                           onClick={() => selected.parentId && jumpTo(selected.parentId)}
                         >
                           <ArrowUp size={13} />
-                          상위 요소 선택
+                          {t('selectParentElement')}
                         </button>
                       </div>
-                      <div className="section-caption">글자 스타일</div>
-                      <label className="field-label">글자색</label>
+                      <div className="section-caption">{t('textStyle')}</div>
+                      <label className="field-label">{t('textColor')}</label>
                       <div className="color-field">
                         <input
-                          aria-label="글자색 선택"
+                          aria-label={t('chooseTextColor')}
                           type="color"
                           value={/^#[0-9a-f]{6}$/i.test(color) ? color : '#343e33'}
                           onChange={(event) => setColor(event.target.value)}
                         />
                         <input
-                          aria-label="글자색 코드"
+                          aria-label={t('textColorCode')}
                           value={color}
                           onChange={(event) => setColor(event.target.value)}
                           maxLength={7}
@@ -1032,11 +1050,11 @@ export default function App() {
                             change((current) => changeStyle(current, selected.id, 'color', color))
                           }
                         >
-                          적용
+                          {t('apply')}
                         </button>
                       </div>
                       <label className="field-label" htmlFor="font-size">
-                        글자 크기
+                        {t('fontSize')}
                       </label>
                       <div className="number-field">
                         <input
@@ -1057,16 +1075,16 @@ export default function App() {
                             )
                           }
                         >
-                          적용
+                          {t('apply')}
                         </button>
                       </div>
                       {selected.textParts.length > 0 && (
                         <>
-                          <div className="section-caption">문구 수정</div>
+                          <div className="section-caption">{t('editText')}</div>
                           {selected.textParts.map((part, index) => (
                             <div className="text-part" key={part.index}>
                               <label className="sr-only" htmlFor={`text-${part.index}`}>
-                                문구 {index + 1}
+                                {t('textPart', { number: index + 1 })}
                               </label>
                               <textarea
                                 id={`text-${part.index}`}
@@ -1088,7 +1106,7 @@ export default function App() {
                                   )
                                 }
                               >
-                                문구 적용
+                                {t('applyText')}
                               </button>
                             </div>
                           ))}
@@ -1096,17 +1114,18 @@ export default function App() {
                       )}
                       {selected.tag === 'img' && (
                         <>
-                          <div className="section-caption">이미지</div>
+                          <div className="section-caption">{t('image')}</div>
                           <button
                             className="button full-width"
                             onClick={() => imageInput.current?.click()}
                           >
                             <ImagePlus size={15} />
-                            이미지 교체
+                            {t('replaceImage')}
                           </button>
                           <p className="field-hint">
-                            PNG · JPEG · WebP · GIF / 최대 10MB
-                            <br />새 이미지는 저장하는 HTML에 포함됩니다.
+                            {t('pngJpegWebpGifUpTo10mb')}
+                            <br />
+                            {t('theNewImageIsEmbeddedInThe')}
                           </p>
                         </>
                       )}
@@ -1119,7 +1138,8 @@ export default function App() {
                             setTimeout(() => noteInput.current?.focus(), 0);
                           }}
                         >
-                          <MessageSquarePlus size={15} />이 요소에 메모 남기기
+                          <MessageSquarePlus size={15} />
+                          {t('addANoteToThisElement')}
                         </button>
                         <button
                           className="danger-button"
@@ -1127,7 +1147,7 @@ export default function App() {
                           onClick={removeSelected}
                         >
                           <Trash2 size={14} />
-                          선택 요소 삭제
+                          {t('deleteSelectedElement')}
                         </button>
                       </div>
                     </>
@@ -1136,39 +1156,27 @@ export default function App() {
                       <MousePointer2 size={28} strokeWidth={1.3} />
                       <h3>
                         {mode === 'interact'
-                          ? '원하는 화면으로 이동하세요'
-                          : '수정할 곳을 클릭하세요'}
+                          ? t('navigateToTheScreenYouWant')
+                          : t('clickWhatYouWantToChange')}
                       </h3>
                       <p>
                         {mode === 'interact' ? (
                           <>
-                            문서의 메뉴와 버튼이 동작합니다.
+                            {t('theDocumentMenusAndButtonsAreActive')}
                             <br />
-                            수정할 화면에서 직접 편집을 누르세요.
+                            {t('chooseEditDirectlyWhenYouReachThe')}
                           </>
                         ) : (
-                          <>
-                            문구, 이미지 또는 카드 영역을
-                            <br />
-                            선택하면 여기서 수정할 수 있어요.
-                          </>
+                          <>{t('selectTextAnImageOrACard')}</>
                         )}
                       </p>
                       <div className="tip-card">
-                        <strong>작은 팁</strong>
+                        <strong>{t('quickTip')}</strong>
                         <p>
                           {mode === 'interact' ? (
-                            <>
-                              편집 모드로 바꿔도
-                              <br />
-                              현재 화면이 유지됩니다.
-                            </>
+                            <>{t('yourCurrentScreenStaysInPlaceWhen')}</>
                           ) : (
-                            <>
-                              문구를 더블클릭하면 화면에서
-                              <br />
-                              바로 고칠 수 있습니다.
-                            </>
+                            <>{t('doubleClickTextToEditItOn')}</>
                           )}
                         </p>
                       </div>
@@ -1176,58 +1184,64 @@ export default function App() {
                   )}
                   <div className="sidebar-bottom-tip">
                     <Info size={14} />
-                    <p>
-                      새 요소 추가나 복잡한 배치 변경은
-                      <br />그 자리에 메모로 남겨주세요.
-                    </p>
+                    <p>{t('leaveANoteForNewElementsOr')}</p>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="note-summary">
                     <div>
-                      <strong>{openCount}</strong>
-                      <span>개의 요청이 기다리고 있어요</span>
+                      <span>
+                        {t(
+                          new Intl.PluralRules(locale).select(openCount) === 'one'
+                            ? 'pendingOne'
+                            : 'pendingOther',
+                          { count: openCount },
+                        )}
+                      </span>
                     </div>
                     <small>
-                      전체 {session.notes.length} · 완료 {session.notes.length - openCount}
+                      {t('noteSummary', {
+                        total: session.notes.length,
+                        done: session.notes.length - openCount,
+                      })}
                     </small>
                   </div>
                   {rebindId && (
                     <div className="rebind-box">
-                      <p>문서에서 새 대상을 선택한 뒤 연결하세요.</p>
+                      <p>{t('selectANewTargetInTheDocument')}</p>
                       <button
                         className="button primary full-width"
                         disabled={!selected}
                         onClick={() => {
                           change((current) => rebindNote(current, rebindId, selected!.id));
                           setRebindId(null);
-                          notify('메모 대상을 다시 연결했습니다.');
+                          notify(message('noteTargetReassigned'));
                         }}
                       >
-                        선택한 요소에 연결
+                        {t('connectToSelectedElement')}
                       </button>
                       <button className="text-button" onClick={() => setRebindId(null)}>
-                        취소
+                        {t('cancel')}
                       </button>
                     </div>
                   )}
                   <div className="note-composer">
                     <div className="section-caption">
-                      {editingNoteId ? '메모 수정' : '새 수정 요청'}
+                      {editingNoteId ? t('editNote') : t('newChangeRequest')}
                     </div>
                     <div className="composer-target">
                       <span className="status-dot" />
                       <span>
                         {editingNoteId
-                          ? '기존 메모의 대상'
+                          ? t('existingNoteTarget')
                           : selected
-                            ? `〈${selected.tag}〉 ${selected.excerpt || '선택 요소'}`
-                            : '문서에서 대상을 먼저 선택하세요'}
+                            ? `〈${selected.tag}〉 ${selected.excerpt || t('selectedElement')}`
+                            : t('selectATargetInTheDocumentFirst')}
                       </span>
                     </div>
                     <label className="field-label" htmlFor="note-relation">
-                      요청할 위치
+                      {t('requestedPosition')}
                     </label>
                     <select
                       id="note-relation"
@@ -1236,14 +1250,14 @@ export default function App() {
                     >
                       {Object.entries(RELATIONS).map(([value, label]) => (
                         <option key={value} value={value}>
-                          {label}
+                          {format(label)}
                         </option>
                       ))}
                     </select>
                     <textarea
                       ref={noteInput}
-                      aria-label="수정 요청"
-                      placeholder="예: 이 제목 앞에 집 모양 아이콘을 넣어주세요."
+                      aria-label={t('changeRequest')}
+                      placeholder={t('exampleAddAHomeIconBeforeThis')}
                       value={noteText}
                       maxLength={20_000}
                       onChange={(event) => setNoteText(event.target.value)}
@@ -1254,7 +1268,7 @@ export default function App() {
                       onClick={storeNote}
                     >
                       <Plus size={15} />
-                      {editingNoteId ? '메모 수정 저장' : '메모 추가'}
+                      {editingNoteId ? t('saveNoteChanges') : t('addNote')}
                     </button>
                     {editingNoteId && (
                       <button
@@ -1264,16 +1278,16 @@ export default function App() {
                           setNoteText('');
                         }}
                       >
-                        수정 취소
+                        {t('cancelEditing')}
                       </button>
                     )}
                   </div>
                   <div className="note-filters">
                     {(
                       [
-                        ['all', '전체'],
-                        ['open', '미완료'],
-                        ['done', '완료'],
+                        ['all', t('all')],
+                        ['open', t('pending')],
+                        ['done', t('completed')],
                       ] as const
                     ).map(([value, label]) => (
                       <button
@@ -1311,12 +1325,12 @@ export default function App() {
                               </button>
                               <span>
                                 {exists
-                                  ? `〈${note.target.tag}〉 ${RELATIONS[note.relation]}`
-                                  : '대상 없음'}
+                                  ? `〈${note.target.tag}〉 ${format(RELATIONS[note.relation])}`
+                                  : t('targetMissing')}
                               </span>
                               <button
                                 className="icon-button"
-                                aria-label={`메모 ${index + 1} 삭제`}
+                                aria-label={t('deleteNote', { number: index + 1 })}
                                 onClick={() => {
                                   change((current) => ({
                                     ...current,
@@ -1345,16 +1359,16 @@ export default function App() {
                                 }
                               >
                                 {note.done ? <RotateCcw size={12} /> : <Check size={12} />}
-                                {note.done ? '다시 열기' : '완료'}
+                                {note.done ? t('reopen') : t('completed')}
                               </button>
-                              <button onClick={() => editNote(note)}>수정</button>
+                              <button onClick={() => editNote(note)}>{t('edit')}</button>
                               <button
                                 onClick={() => {
                                   setRebindId(note.id);
                                   setMode('select');
                                 }}
                               >
-                                대상 재지정
+                                {t('reassignTarget')}
                               </button>
                             </div>
                           </article>
@@ -1364,9 +1378,9 @@ export default function App() {
                       <div className="no-notes">
                         <MessageSquarePlus size={23} strokeWidth={1.4} />
                         <p>
-                          아직 남긴 메모가 없어요.
+                          {t('noNotesYet')}
                           <br />
-                          화면에서 원하는 위치를 짚어보세요.
+                          {t('pointToALocationOnTheScreen')}
                         </p>
                       </div>
                     )}
@@ -1388,12 +1402,12 @@ export default function App() {
                 }
               >
                 <Copy size={14} />
-                {copying ? '저장하고 복사 중…' : '저장하고 AI 요청 복사'}
+                {copying ? t('savingAndCopying') : t('saveAndCopyAiRequest')}
               </button>
               <p>
                 {token
-                  ? '현재 수정과 메모를 저장한 뒤 요청을 복사합니다.'
-                  : '전달용 HTML을 내려받고 요청을 복사합니다. 파일도 함께 첨부하세요.'}
+                  ? t('savesYourEditsAndNotesThenCopies')
+                  : t('downloadsReviewHtmlAndCopiesTheRequest')}
               </p>
             </div>
           </aside>
@@ -1402,16 +1416,19 @@ export default function App() {
       <footer className="app-footer">
         <span>
           <Laptop size={13} />
-          {token ? '내 PC의 작업 파일에 연결되어 있습니다' : '문서는 브라우저 안에서 처리됩니다'}
+          {token ? t('connectedToAWorkingFileOnYour') : t('documentsAreProcessedInYourBrowser')}
         </span>
         <div>
-          <span>{session ? draftStatus : '정적 HTML 문서 편집기'}</span>
+          <span>{session ? format(draftStatus) : t('staticHtmlEditor')}</span>
           {session && (
             <>
               <span className="footer-separator">·</span>
               <span>
-                {exportStatus}
-                {dirty && exportStatus !== 'HTML 저장 전' ? ' · 추가 변경 있음' : ''}
+                {format(exportStatus)}
+                {dirty &&
+                (typeof exportStatus === 'string' || exportStatus.key !== 'htmlNotSavedYet')
+                  ? t('additionalUnsavedChanges')
+                  : ''}
               </span>
             </>
           )}
@@ -1420,8 +1437,8 @@ export default function App() {
       {dragOver && (
         <div className="drag-overlay">
           <Upload size={40} />
-          <h2>HTML 파일을 놓아주세요</h2>
-          <p>문서 한 개를 열어 편집합니다.</p>
+          <h2>{t('dropAnHtmlFile')}</h2>
+          <p>{t('openOneDocumentToEdit')}</p>
         </div>
       )}
       {toast && (
@@ -1430,8 +1447,12 @@ export default function App() {
           className={`toast ${toast.error ? 'error' : ''}`}
         >
           {toast.error ? <AlertTriangle size={17} /> : <CheckCheck size={17} />}
-          <span>{toast.text}</span>
-          <button className="icon-button" aria-label="알림 닫기" onClick={() => setToast(null)}>
+          <span>{format(toast.text)}</span>
+          <button
+            className="icon-button"
+            aria-label={t('dismissNotification')}
+            onClick={() => setToast(null)}
+          >
             <X size={14} />
           </button>
         </div>
@@ -1442,14 +1463,14 @@ export default function App() {
             className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label={modal.title}
+            aria-label={format(modal.title)}
             onClick={(event) => event.stopPropagation()}
           >
-            <h2>{modal.title}</h2>
-            <p>{modal.message}</p>
+            <h2>{format(modal.title)}</h2>
+            <p>{format(modal.message)}</p>
             <div className="modal-actions">
               <button className="button" onClick={() => setModal(null)}>
-                취소
+                {t('cancel')}
               </button>
               {modal.secondary && (
                 <button
@@ -1460,7 +1481,7 @@ export default function App() {
                     action();
                   }}
                 >
-                  {modal.secondary.label}
+                  {format(modal.secondary.label)}
                 </button>
               )}
               <button
@@ -1471,7 +1492,7 @@ export default function App() {
                   action();
                 }}
               >
-                {modal.action}
+                {format(modal.action)}
               </button>
             </div>
           </section>
@@ -1483,57 +1504,51 @@ export default function App() {
             className="modal help-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="사용 방법"
+            aria-label={t('howToUse')}
             onClick={(event) => event.stopPropagation()}
           >
             <button
               className="icon-button modal-close"
-              aria-label="사용 방법 닫기"
+              aria-label={t('closeHelp')}
               onClick={() => setHelp(false)}
             >
               <X size={18} />
             </button>
-            <span className="section-caption">HTML EDIT · QUICK GUIDE</span>
-            <h2>원하는 곳을 짚어서, 더 쉽게.</h2>
+            <span className="section-caption">{t('quickGuide')}</span>
+            <h2>{t('pointToItMakeItEasier')}</h2>
             <ol>
               <li>
-                <strong>HTML을 열어주세요.</strong>
-                <p>CSS와 이미지가 포함된 단일 HTML 문서를 권장합니다.</p>
+                <strong>{t('openYourHtml')}</strong>
+                <p>{t('aSingleHtmlFileWithEmbeddedCss')}</p>
               </li>
               <li>
-                <strong>간단한 수정은 직접 하세요.</strong>
-                <p>
-                  요소를 클릭해 선택하거나 문구를 더블클릭하세요. 문구 입력 중 Ctrl+Enter로 적용하고
-                  Esc로 취소합니다. 카드 전체는 ‘상위 요소 선택’으로 지정하세요.
-                </p>
+                <strong>{t('makeSimpleEditsYourself')}</strong>
+                <p>{t('clickAnElementOrDoubleClickText')}</p>
               </li>
               <li>
-                <strong>복잡한 작업은 메모로 남기세요.</strong>
-                <p>원하는 요소를 선택하고 앞·뒤·안쪽 등 위치와 요청을 입력하세요.</p>
+                <strong>{t('leaveNotesForComplexChanges')}</strong>
+                <p>{t('selectAnElementAndDescribeTheChange')}</p>
               </li>
               <li>
-                <strong>파일 하나로 AI에게 전달하세요.</strong>
+                <strong>{t('sendOneFileToYourAi')}</strong>
                 <p>
                   {token
-                    ? '‘저장하고 AI 요청 복사’를 누르면 현재 수정과 메모가 작업 파일에 저장됩니다. 복사한 요청을 AI 대화에 붙여넣으세요. AI가 반영한 결과는 열린 편집기에 자동으로 표시됩니다.'
-                    : '‘저장하고 AI 요청 복사’를 누르면 메모를 포함한 HTML을 내려받고 요청을 복사합니다. 파일과 요청을 함께 AI에게 전달하세요.'}
+                    ? t('saveAndCopyAiRequestSavesYour')
+                    : t('saveAndCopyAiRequestDownloadsHtml')}
                 </p>
               </li>
             </ol>
-            <div className="help-note">
-              임시 저장은 이 브라우저의 최근 작업 하나를 보관합니다. 장기 보관은 HTML 파일로
-              저장하세요. 완성본에는 수정 메모가 포함되지 않습니다.
-            </div>
+            <div className="help-note">{t('draftStorageKeepsYourLatestWorkSave')}</div>
             {session && (
               <textarea
                 className="handoff-text"
-                aria-label="AI 전달 설명"
+                aria-label={t('aiHandoffRequest')}
                 readOnly
                 value={handoffText}
               />
             )}
             <button className="button primary" onClick={() => setHelp(false)}>
-              알겠습니다
+              {t('gotIt')}
             </button>
           </section>
         </div>
@@ -1545,13 +1560,10 @@ export default function App() {
               className="modal"
               role="dialog"
               aria-modal="true"
-              aria-label="다른 문서 연결 중"
+              aria-label={t('connectingAnotherDocument')}
             >
-              <h2>다른 문서 열기</h2>
-              <p>
-                Windows 파일 선택 창에서 HTML 문서를 선택하거나 취소해 주세요. 저장과 새 문서 연결이
-                끝날 때까지 현재 작업을 유지합니다.
-              </p>
+              <h2>{t('openAnotherDocument50')}</h2>
+              <p>{t('selectAnHtmlDocumentInTheWindows')}</p>
             </section>
           </div>,
           document.body,

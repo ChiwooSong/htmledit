@@ -1,3 +1,4 @@
+import { useLocale } from '../i18n/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { listElements, previewHtml, type DocumentSession } from '../model/document';
 import { interactionBridge, validateViewState, type ViewState } from '../preview/interaction';
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function InteractivePreview(props: Props) {
+  const { t } = useLocale();
   const frame = useRef<HTMLIFrameElement>(null);
   const latest = useRef(props);
   latest.current = props;
@@ -86,14 +88,12 @@ export default function InteractivePreview(props: Props) {
     <>
       {props.active && !connected && (
         <p className="interaction-status" role="status">
-          {failed
-            ? '문서 조작을 준비하지 못했습니다. 첫 화면으로 돌아가 다시 시도해 주세요.'
-            : '문서 조작 준비 중…'}
+          {failed ? t('couldNotPrepareInteractionReturnToThe') : t('preparingInteraction')}
         </p>
       )}
       <iframe
         ref={frame}
-        title="문서 동작 미리보기"
+        title={t('interactiveDocumentPreview')}
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
         hidden={!props.active}

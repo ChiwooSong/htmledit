@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { EXAMPLE_HTML } from '../src/example';
+import { EXAMPLE_HTML, exampleHtml } from '../src/example';
+import { locales } from '../src/i18n';
 import { addNote, exportDocument, listElements, readDocument } from '../src/model/document';
 
 let session = readDocument(EXAMPLE_HTML, 'onyu-studio.html');
@@ -37,3 +38,7 @@ await writeFile(
   'utf8',
 );
 console.log('예제 문서와 세 가지 수정 요청이 있는 전달용 HTML을 생성했습니다.');
+for (const locale of locales) {
+  await mkdir(`public/examples/${locale}`, { recursive: true });
+  await writeFile(`public/examples/${locale}/onyu-studio.html`, exampleHtml(locale), 'utf8');
+}

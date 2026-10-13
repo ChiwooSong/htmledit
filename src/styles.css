@@ -124,9 +124,42 @@ svg {
   display: flex;
   align-items: center;
   gap: 7px;
+  margin-left: auto;
+  margin-right: 24px;
+}
+.language-control {
+  position: relative;
+  margin-right: 12px;
+}
+.language-control label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.language-control select {
+  max-width: 180px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--green);
+}
+.language-notice {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 0;
+  top: 100%;
+  z-index: 30;
+  width: 280px;
+  padding: 12px;
+  background: #fff8e8;
+  border: 1px solid #dec998;
+  font-size: 12px;
+}
+.sidebar .button,
+.modal .button {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .status-dot {
   width: 6px;
@@ -143,11 +176,12 @@ svg {
   border-radius: 6px;
 }
 .toolbar {
-  height: 64px;
+  min-height: 64px;
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 28px;
+  padding: 10px 28px;
   background: #fff;
   border-bottom: 1px solid var(--line);
 }

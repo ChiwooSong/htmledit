@@ -1,15 +1,13 @@
+import { message, translate, type Locale } from '../../src/i18n';
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 import { LocalError } from './store';
 
 // The browser never supplies a filesystem path. Only the native user's choice
 // grants access to another document. No path or HTML is interpolated into code.
-export async function pickHtmlFile(): Promise<string | null> {
+export async function pickHtmlFile(locale: Locale = 'en'): Promise<string | null> {
   if (process.platform !== 'win32')
-    throw new LocalError(
-      'PICKER_UNSUPPORTED',
-      '파일 선택 창은 Windows에서 지원합니다. 다른 환경에서는 AI에게 파일을 열어 달라고 요청해 주세요.',
-    );
+    throw new LocalError('PICKER_UNSUPPORTED', message('theFilePickerIsSupportedOnWindows'));
   const script = `
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
@@ -19,8 +17,8 @@ $owner.TopMost = $true
 $owner.ShowInTaskbar = $false
 $owner.Opacity = 0
 $dialog = New-Object System.Windows.Forms.OpenFileDialog
-$dialog.Title = 'HTMLEdit - 다른 HTML 문서 열기'
-$dialog.Filter = 'HTML 문서 (*.html;*.htm)|*.html;*.htm'
+$dialog.Title = '${translate(locale, 'pickerTitle').replaceAll("'", "''")}'
+$dialog.Filter = '${translate(locale, 'pickerFilter').replaceAll("'", "''")} (*.html;*.htm)|*.html;*.htm'
 $dialog.CheckFileExists = $true
 $dialog.Multiselect = $false
 $dialog.RestoreDirectory = $true
@@ -45,10 +43,7 @@ try {
       (error, stdout) => {
         if (error)
           reject(
-            new LocalError(
-              'PICKER_FAILED',
-              '파일 선택 창을 완료하지 못했습니다. 기존 문서는 유지됩니다. 다시 시도해 주세요.',
-            ),
+            new LocalError('PICKER_FAILED', message('couldNotCompleteFileSelectionYourDocument')),
           );
         else resolve(stdout.trim() || null);
       },

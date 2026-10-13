@@ -1,3 +1,14 @@
+import { Preferences } from './preferences';
+import {
+  message,
+  describeError,
+  formatMessage,
+  translate,
+  normalizeLocale,
+  detectLocale,
+  isMessage,
+  type Locale,
+} from '../../src/i18n';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
@@ -22,23 +33,44 @@ const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 type Connection = { origin: string; token: string; file: string; pid: number; version: string };
 const registry = (file: string) =>
   join(home, 'sessions', `${hash(process.platform === 'win32' ? file.toLowerCase() : file)}.json`);
-const args = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const languageIndex = rawArgs.indexOf('--lang');
+const requestedLanguage = languageIndex < 0 ? undefined : rawArgs[languageIndex + 1];
+const args =
+  languageIndex < 0
+    ? rawArgs
+    : rawArgs.filter((_, index) => index !== languageIndex && index !== languageIndex + 1);
+const preferences = new Preferences(join(home, 'preferences.json'));
+let cliLocale: Locale = 'en';
 const option = (name: string) => {
   const i = args.indexOf(name);
   return i < 0 ? undefined : args[i + 1];
 };
 const output = (value: unknown) =>
-  console.log(JSON.stringify(value, null, args.includes('--json') ? undefined : 2));
+  console.log(
+    JSON.stringify(
+      value,
+      (_key, item) => (isMessage(item) ? formatMessage(cliLocale, item) : item),
+      args.includes('--json') ? undefined : 2,
+    ),
+  );
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function request(connection: Connection, path: string, method = 'GET', data?: unknown) {
   const response = await fetch(`${connection.origin}/api/${path}`, {
     method,
-    headers: { Authorization: `Bearer ${connection.token}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${connection.token}`,
+      'Content-Type': 'application/json',
+      'Accept-Language': cliLocale,
+    },
     body: data === undefined ? undefined : JSON.stringify(data),
     signal: AbortSignal.timeout(30_000),
   });
   const value = await response.json();
-  if (!response.ok) throw new LocalError(value.code, value.message, response.status);
+  if (!response.ok) {
+    const display = { key: value.messageKey, params: value.messageParams };
+    throw new LocalError(value.code, isMessage(display) ? display : value.message, response.status);
+  }
   return value;
 }
 async function live(file: string): Promise<Connection | undefined> {
@@ -65,7 +97,7 @@ async function serve(file: string) {
     try {
       pid = Number(await readFile(lock, 'utf8'));
     } catch {
-      throw new LocalError('BUSY', '서버가 시작 중입니다. 다시 시도해 주세요.');
+      throw new LocalError('BUSY', message('theServerIsStartingTryAgain'));
     }
     let alive = true;
     try {
@@ -73,17 +105,22 @@ async function serve(file: string) {
     } catch (error) {
       alive = (error as NodeJS.ErrnoException).code !== 'ESRCH';
     }
-    if (alive) throw new LocalError('BUSY', '이미 실행 중이거나 시작 중인 작업입니다.');
+    if (alive) throw new LocalError('BUSY', message('thisTaskIsAlreadyRunningOrStarting'));
     await rm(lock, { force: true });
     await writeFile(lock, String(process.pid), { flag: 'wx', mode: 0o600 });
   }
   try {
-    const instance = await startServer(file, join(root, 'dist'), async () => {
-      const selected = await pickHtmlFile();
-      if (!selected) return null;
-      const next = await ensure(await prepareSelectedFile(selected));
-      return { url: `${next.origin}/#htmledit=${next.token}` };
-    });
+    const instance = await startServer(
+      file,
+      join(root, 'dist'),
+      async (locale) => {
+        const selected = await pickHtmlFile(locale);
+        if (!selected) return null;
+        const next = await ensure(await prepareSelectedFile(selected));
+        return { url: `${next.origin}/#htmledit=${next.token}` };
+      },
+      preferences,
+    );
     const connection: Connection = {
       origin: instance.origin,
       token: instance.token,
@@ -108,10 +145,7 @@ async function ensure(file: string) {
   const existing = await live(file);
   if (existing) {
     if (existing.version !== manifest.version)
-      throw new LocalError(
-        'VERSION',
-        '다른 버전의 서버가 실행 중입니다. 브라우저 작업을 저장한 뒤 stop으로 종료하고 다시 열어 주세요.',
-      );
+      throw new LocalError('VERSION', message('aDifferentServerVersionIsRunningSave'));
     return existing;
   }
   await mkdir(join(home, 'sessions'), { recursive: true });
@@ -133,7 +167,7 @@ async function ensure(file: string) {
     const connection = await live(file);
     if (connection) return connection;
   }
-  throw new LocalError('START_FAILED', `서버를 시작하지 못했습니다. 로그: ${registry(file)}.log`);
+  throw new LocalError('START_FAILED', message('serverLog', { file: `${registry(file)}.log` }));
 }
 function browser(url: string) {
   let child;
@@ -149,7 +183,7 @@ function browser(url: string) {
       stdio: 'ignore',
     });
   child.on('error', () =>
-    console.error('브라우저를 자동으로 열지 못했습니다. 출력한 URL을 열어 주세요.'),
+    console.error(translate(cliLocale, 'couldNotOpenTheBrowserAutomaticallyOpen')),
   );
   child.unref();
 }
@@ -160,7 +194,8 @@ async function hashes(directory: string, prefix = ''): Promise<Record<string, st
     const relative = join(prefix, entry.name);
     if (entry.isDirectory()) Object.assign(result, await hashes(directory, relative));
     else if (entry.isFile()) result[relative] = hash(await readFile(join(directory, relative)));
-    else throw new LocalError('INSTALL_CHANGED', '스킬 폴더에 지원하지 않는 링크가 있습니다.');
+    else
+      throw new LocalError('INSTALL_CHANGED', message('theSkillFolderContainsAnUnsupportedLink'));
   }
   return result;
 }
@@ -169,10 +204,7 @@ async function managed(directory: string) {
     const actual = await hashes(directory);
     const saved = JSON.parse(await readFile(join(directory, '.htmledit-install.json'), 'utf8'));
     if (saved.owner !== 'htmledit' || JSON.stringify(actual) !== JSON.stringify(saved.hashes))
-      throw new LocalError(
-        'INSTALL_CHANGED',
-        `기존 스킬을 수정했거나 다른 스킬이 있습니다. 먼저 별도 보관해 주세요: ${directory}`,
-      );
+      throw new LocalError('INSTALL_CHANGED', message('modifiedSkill', { file: directory }));
     return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -183,7 +215,7 @@ async function managed(directory: string) {
         if ((e as NodeJS.ErrnoException).code === 'ENOENT') return false;
         throw e;
       }
-      throw new LocalError('INSTALL_CHANGED', `관리되지 않는 기존 스킬입니다: ${directory}`);
+      throw new LocalError('INSTALL_CHANGED', message('unmanagedSkill', { file: directory }));
     }
     throw error;
   }
@@ -191,7 +223,7 @@ async function managed(directory: string) {
 async function install(uninstall = false) {
   const agent = option('--agent') ?? 'all';
   if (!['claude', 'codex', 'all'].includes(agent))
-    throw new LocalError('AGENT', '--agent claude|codex|all 중 선택해 주세요.');
+    throw new LocalError('AGENT', message('chooseAgentClaudeCodexOrAll'));
   const agents = agent === 'all' ? ['claude', 'codex'] : [agent];
   const destinations = agents.map((a) => ({
     agent: a,
@@ -203,13 +235,22 @@ async function install(uninstall = false) {
       if (await managed(target.path)) await rm(target.path, { recursive: true });
     output({
       removed: destinations.map((t) => t.path),
-      message: '문서·백업·실행 도구는 보존했습니다.',
+      message: message('documentsBackupsAndRuntimeWerePreserved'),
     });
     return;
   }
   const runtime = join(home, 'versions', manifest.version);
   await mkdir(runtime, { recursive: true });
-  for (const name of ['dist', 'runtime', 'bin', 'skills', 'package.json', 'LICENSE']) {
+  for (const name of [
+    'dist',
+    'runtime',
+    'bin',
+    'skills',
+    'docs',
+    'README.md',
+    'package.json',
+    'LICENSE',
+  ]) {
     if (resolve(root) !== resolve(runtime))
       await cp(join(root, name), join(runtime, name), { recursive: true });
   }
@@ -241,26 +282,45 @@ async function install(uninstall = false) {
     installed: destinations.map((t) => t.path),
     version: manifest.version,
     runtime,
-    message: 'Claude Code/Codex에서 htmledit 스킬을 선택하세요. 보이지 않으면 새 세션을 여세요.',
+    message: message('selectTheHtmleditSkillInClaudeCode'),
   });
 }
 async function main() {
+  const system = detectLocale([
+    process.env.LC_ALL ?? '',
+    process.env.LC_MESSAGES ?? '',
+    process.env.LANG ?? '',
+    Intl.DateTimeFormat().resolvedOptions().locale,
+  ]);
+  let saved: 'auto' | Locale = 'auto';
+  try {
+    saved = (await preferences.read()).language;
+  } catch {
+    console.error(translate(system, 'preferencesReadFailed'));
+  }
+  cliLocale = saved === 'auto' ? system : saved;
+  if (languageIndex >= 0) {
+    const normalized = normalizeLocale(requestedLanguage ?? '');
+    if (!normalized)
+      throw new LocalError('INPUT', message('invalidLanguage', { value: requestedLanguage ?? '' }));
+    cliLocale = normalized;
+  }
   const command = args[0];
   if (command === 'install' || command === 'uninstall') return install(command === 'uninstall');
   if (command === '--version') return output({ version: manifest.version });
   if (command === '_serve') return serve(await canonicalFile(args[1]));
   if (command === 'open') {
     if (!args[1] || args[1].startsWith('--'))
-      throw new LocalError('INPUT', 'open <HTML 경로>가 필요합니다.');
+      throw new LocalError('INPUT', message('provideOpenHtmlPath'));
     const file = await prepareFile(args[1]);
     const connection = await ensure(file);
-    const url = `${connection.origin}/#htmledit=${connection.token}`;
+    const url = `${connection.origin}/${languageIndex >= 0 ? '?lang=' + encodeURIComponent(cliLocale) : ''}#htmledit=${connection.token}`;
     if (!args.includes('--no-browser')) browser(url);
     return output({ file, url, version: connection.version });
   }
   if (['status', 'checkout', 'apply', 'stop'].includes(command)) {
     const name = option('--file');
-    if (!name) throw new LocalError('INPUT', '--file <작업 파일>이 필요합니다.');
+    if (!name) throw new LocalError('INPUT', message('provideFileWorkingFile'));
     const file = await canonicalFile(name);
     const connection = await live(file);
     if (command === 'status')
@@ -279,13 +339,15 @@ async function main() {
     const candidate = option('--candidate');
     const revision = option('--revision');
     if (!candidate || !revision)
-      throw new LocalError('INPUT', '--candidate와 --revision이 필요합니다.');
+      throw new LocalError('INPUT', message('provideCandidateAndRevision'));
     const value = await snapshot(await canonicalFile(candidate));
     const result = await request(running, 'apply', 'POST', { html: value.html, revision });
     return output({ file, revision: result.revision, backup: result.backup });
   }
   console.log(
-    'HTMLEdit\n  install --agent claude|codex|all\n  open <file.html> [--no-browser]\n  status|checkout|stop --file <file.review.html>\n  apply --file <file.review.html> --candidate <file> --revision <hash>\n  uninstall --agent claude|codex|all\n명령 결과는 JSON이며 --json으로 간결하게 출력합니다.',
+    'HTMLEdit\n  install --agent claude|codex|all\n  open <file.html> [--no-browser]\n  status|checkout|stop --file <file.review.html>\n  apply --file <file.review.html> --candidate <file> --revision <hash>\n  uninstall --agent claude|codex|all\n' +
+      translate(cliLocale, 'cliHelp') +
+      '',
   );
   if (command && !['--help', '-h'].includes(command)) process.exitCode = 1;
 }
@@ -293,7 +355,13 @@ main().catch((error) => {
   console.error(
     JSON.stringify({
       code: error instanceof LocalError ? error.code : 'IO',
-      message: error instanceof Error ? error.message : String(error),
+      message: formatMessage(cliLocale, describeError(error)),
+      ...(isMessage(describeError(error))
+        ? {
+            messageKey: (describeError(error) as import('../../src/i18n').Message).key,
+            messageParams: (describeError(error) as import('../../src/i18n').Message).params,
+          }
+        : {}),
     }),
   );
   process.exitCode = 1;

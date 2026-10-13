@@ -1,3 +1,4 @@
+import { useLocale } from '../i18n/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { previewHtml, TARGET_ATTR, type DocumentSession } from '../model/document';
 import InteractivePreview from './InteractivePreview';
@@ -32,6 +33,7 @@ interface Edit {
   lineHeight: string;
 }
 export default function Preview(props: Props) {
+  const { t } = useLocale();
   const frame = useRef<HTMLIFrameElement>(null);
   const wrapper = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
@@ -249,8 +251,8 @@ export default function Preview(props: Props) {
         <div className="interaction-bar">
           <span>
             {interacting
-              ? '메뉴와 버튼을 눌러 이동하세요. 원하는 화면에서 직접 편집을 선택하세요. 문서의 스크립트가 실행되므로 신뢰하는 문서에서만 사용하세요.'
-              : '조작한 화면을 편집하고 있습니다. 다른 화면은 문서 조작에서 이동하세요.'}
+              ? t('useMenusAndButtonsToNavigateThen')
+              : t('youAreEditingTheCurrentScreenUse')}
           </span>
           <button
             className="button"
@@ -259,7 +261,7 @@ export default function Preview(props: Props) {
               setInteractionEpoch((value) => value + 1);
             }}
           >
-            첫 화면으로
+            {t('backToFirstScreen')}
           </button>
         </div>
       )}
@@ -270,7 +272,7 @@ export default function Preview(props: Props) {
       >
         <iframe
           ref={frame}
-          title="문서 미리보기"
+          title={t('documentPreview')}
           sandbox="allow-same-origin"
           hidden={interacting}
           srcDoc={srcDoc}
@@ -287,7 +289,7 @@ export default function Preview(props: Props) {
         <div className="overlay-layer" aria-hidden="true" hidden={interacting}>
           {selectionRect && (
             <div className="selection-outline" style={selectionRect}>
-              <span>선택됨</span>
+              <span>{t('selected')}</span>
             </div>
           )}
         </div>
@@ -305,8 +307,8 @@ export default function Preview(props: Props) {
                   left: Math.max(0, marker.rect.left - 9),
                   top: Math.max(2, marker.rect.top - 10),
                 }}
-                title={`메모 ${marker.number}`}
-                aria-label={`메모 ${marker.number} 위치`}
+                title={t('noteNumber', { number: marker.number })}
+                aria-label={t('noteLocation', { number: marker.number })}
                 onClick={() => props.onMarker(marker.id, marker.targetId)}
               >
                 {marker.number}
@@ -320,7 +322,8 @@ export default function Preview(props: Props) {
           >
             <textarea
               ref={input}
-              aria-label="문구 직접 편집"
+              data-htmledit-inline-editor="true"
+              aria-label={t('inlineTextEditor')}
               value={edit.text}
               style={{
                 fontSize: edit.fontSize,
@@ -339,8 +342,8 @@ export default function Preview(props: Props) {
               }}
             />
             <div className="inline-actions">
-              <button onClick={() => finish(false)}>취소</button>
-              <button onClick={() => finish(true)}>적용</button>
+              <button onClick={() => finish(false)}>{t('cancel')}</button>
+              <button onClick={() => finish(true)}>{t('apply')}</button>
             </div>
           </div>
         )}

@@ -1,8 +1,21 @@
+import {
+  message,
+  MessageError,
+  describeError,
+  translate,
+  type Locale,
+  type DisplayMessage,
+} from '../i18n';
 import { parse, parseFragment, serialize, type DefaultTreeAdapterTypes as T } from 'parse5';
 
 export const TARGET_ATTR = 'data-htmledit-id';
 export const REVIEW_ID = 'htmledit-review';
-export const RELATIONS = { self: '이 요소', before: '앞', after: '뒤', inside: '안쪽' } as const;
+export const RELATIONS = {
+  self: message('thisElement'),
+  before: message('before'),
+  after: message('after'),
+  inside: message('inside'),
+} as const;
 export type Relation = keyof typeof RELATIONS;
 export interface Note {
   id: string;
@@ -16,8 +29,8 @@ export interface DocumentSession {
   html: string;
   fileName: string;
   notes: Note[];
-  warnings: string[];
-  metadataIssue?: string;
+  warnings: DisplayMessage[];
+  metadataIssue?: DisplayMessage;
 }
 export interface ElementInfo {
   id: string;
@@ -123,7 +136,7 @@ function sourceViewerHtml(root: T.Node): string | undefined {
 
 export function validateNotes(value: unknown): Note[] {
   if (!Array.isArray(value) || value.length > 5000)
-    throw new Error('메모 목록 형식이 올바르지 않습니다.');
+    throw new MessageError(message('invalidNoteListFormat'));
   const ids = new Set<string>();
   return value.map((item) => {
     if (
@@ -140,7 +153,7 @@ export function validateNotes(value: unknown): Note[] {
       typeof item.target.excerpt !== 'string' ||
       ids.has(item.id)
     )
-      throw new Error('메모 내용 또는 식별자가 올바르지 않습니다.');
+      throw new MessageError(message('invalidNoteContentOrIdentifier'));
     ids.add(item.id);
     return {
       id: item.id,
@@ -167,24 +180,25 @@ function stripToolData(root: T.Node) {
 }
 
 export function readDocument(source: string, fileName = 'document.html'): DocumentSession {
-  if (!source.trim()) throw new Error('비어 있는 파일입니다. HTML 문서를 선택해 주세요.');
+  if (!source.trim()) throw new MessageError(message('thisFileIsEmptyChooseAnHtml'));
   const root = parse(source);
-  const warnings = new Set<string>();
+  const warnings = new Set<DisplayMessage>();
   let notes: Note[] = [];
-  let metadataIssue: string | undefined;
+  let metadataIssue: DisplayMessage | undefined;
   const blocks = elements(root).filter(
     (node) => node.tagName === 'script' && attr(node, 'id') === REVIEW_ID,
   );
   if (blocks.length) {
     try {
-      if (blocks.length !== 1) throw new Error('메모 저장 블록이 중복되어 있습니다.');
+      if (blocks.length !== 1) throw new MessageError(message('duplicateReviewMetadataBlocks'));
       if (attr(blocks[0], 'type') !== 'application/json')
-        throw new Error('메모 저장 블록의 형식이 올바르지 않습니다.');
+        throw new MessageError(message('invalidReviewMetadataBlockFormat'));
       const payload = JSON.parse(rawText(blocks[0]));
-      if (payload?.version !== 1) throw new Error('지원하지 않는 메모 형식 버전입니다.');
+      if (payload?.version !== 1) throw new MessageError(message('unsupportedReviewFormatVersion'));
       notes = validateNotes(payload.notes);
     } catch (error) {
-      metadataIssue = error instanceof Error ? error.message : '메모를 읽을 수 없습니다.';
+      metadataIssue =
+        error instanceof Error ? describeError(error) : message('couldNotReadTheNotes');
     }
     blocks.forEach(remove);
   }
@@ -201,15 +215,13 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
     try {
       restored.notes = validateNotes([...notes, ...restored.notes]);
     } catch (error) {
-      metadataIssue = error instanceof Error ? error.message : '메모를 읽을 수 없습니다.';
+      metadataIssue =
+        error instanceof Error ? describeError(error) : message('couldNotReadTheNotes');
     }
     return {
       ...restored,
       metadataIssue: metadataIssue ?? restored.metadataIssue,
-      warnings: [
-        '브라우저의 소스 보기로 저장된 파일에서 원래 HTML을 복원했습니다. 원본 파일은 변경하지 않습니다.',
-        ...restored.warnings,
-      ],
+      warnings: [message('originalHtmlRestoredFromABrowserSource'), ...restored.warnings],
     };
   }
   const all = elements(root);
@@ -230,12 +242,10 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
         !['application/json', 'application/ld+json'].includes(attr(node, 'type') ?? ''),
     )
   ) {
-    warnings.add(
-      '스크립트가 있는 문서입니다. 메뉴와 탭은 문서 조작 모드에서 이용한 뒤 직접 편집으로 전환하세요. 외부 스크립트로 생성되는 화면은 지원하지 않습니다.',
-    );
+    warnings.add(message('thisDocumentContainsScriptsUseInteractFor'));
   }
   if (all.some((node) => ['iframe', 'object', 'embed'].includes(node.tagName)))
-    warnings.add('외부 삽입 화면은 편집 중 표시하지 않습니다.');
+    warnings.add(message('embeddedExternalPagesAreHiddenWhileEditing'));
   if (
     all.some((node) =>
       node.attrs.some(
@@ -246,9 +256,7 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
     ) ||
     cssUrls.some((url) => !/^(https?:|data:|blob:|#|\s*$)/i.test(url))
   ) {
-    warnings.add(
-      '별도 파일을 가리키는 상대 경로가 있습니다. 첫 버전은 관련 폴더를 불러오지 않아 일부 이미지나 스타일이 누락될 수 있습니다.',
-    );
+    warnings.add(message('relativePathsReferToSeparateFilesRelated'));
   }
   if (
     all.some((node) =>
@@ -258,9 +266,7 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
     ) ||
     cssUrls.some((url) => /^https?:/i.test(url))
   ) {
-    warnings.add(
-      '외부 이미지·스타일·폰트는 원래 주소에서 불러옵니다. 해당 자원에 접근할 수 있어야 같은 모습으로 표시됩니다.',
-    );
+    warnings.add(message('externalImagesStylesAndFontsLoadFrom'));
   }
   const counts = new Map<string, number>();
   all.forEach((node) => {
@@ -273,7 +279,7 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
     const id = attr(node, TARGET_ATTR);
     if (id && isId(id) && counts.get(id) === 1) return;
     if (id && counts.get(id)! > 1)
-      warnings.add('중복된 대상 식별자가 있습니다. 관련 메모의 대상을 다시 지정해 주세요.');
+      warnings.add(message('duplicateTargetIdentifiersFoundReassignTheAffected'));
     let replacement = newId();
     while (used.has(replacement)) replacement = newId();
     used.add(replacement);
@@ -286,7 +292,13 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
     .forEach((node) => {
       node.attrs = node.attrs.filter((item) => item.name !== TARGET_ATTR);
     });
-  return { html: serialize(root), fileName, notes, warnings: [...warnings], metadataIssue };
+  return {
+    html: serialize(root),
+    fileName,
+    notes,
+    warnings: [...new Map([...warnings].map((w) => [JSON.stringify(w), w])).values()],
+    metadataIssue,
+  };
 }
 
 export function listElements(session: DocumentSession): ElementInfo[] {
@@ -309,7 +321,7 @@ export function listElements(session: DocumentSession): ElementInfo[] {
 }
 export function describeTarget(session: DocumentSession, id: string) {
   const node = find(parse(session.html), id);
-  if (!node) throw new Error('선택한 요소를 찾을 수 없습니다.');
+  if (!node) throw new MessageError(message('couldNotFindTheSelectedElement'));
   return { tag: node.tagName, excerpt: excerpt(node) };
 }
 function mutate(
@@ -319,7 +331,7 @@ function mutate(
 ): DocumentSession {
   const root = parse(session.html);
   const node = find(root, id);
-  if (!node) throw new Error('선택한 요소를 찾을 수 없습니다.');
+  if (!node) throw new MessageError(message('couldNotFindTheSelectedElement'));
   edit(node);
   return { ...session, html: serialize(root) };
 }
@@ -331,8 +343,7 @@ export function changeText(
 ) {
   return mutate(session, id, (node) => {
     const child = node.childNodes[childIndex];
-    if (child?.nodeName !== '#text')
-      throw new Error('수정할 문구를 찾을 수 없습니다. 다시 선택해 주세요.');
+    if (child?.nodeName !== '#text') throw new MessageError(message('couldNotFindTheTextToEdit'));
     (child as T.TextNode).value = value;
   });
 }
@@ -343,12 +354,12 @@ export function changeStyle(
   value: string,
 ) {
   if (property === 'color' && !/^#[0-9a-f]{6}$/i.test(value))
-    throw new Error('색상은 6자리 색상 코드로 입력해 주세요.');
+    throw new MessageError(message('enterASixDigitColorCode'));
   if (
     property === 'font-size' &&
     (!/^\d+(\.\d+)?px$/.test(value) || parseFloat(value) < 1 || parseFloat(value) > 256)
   )
-    throw new Error('글자 크기는 1~256 사이로 입력해 주세요.');
+    throw new MessageError(message('fontSizeMustBeBetween1And'));
   return mutate(session, id, (node) => {
     const old = attr(node, 'style') ?? '';
     const cleaned = old
@@ -363,9 +374,9 @@ export function changeStyle(
 }
 export function replaceImage(session: DocumentSession, id: string, dataUrl: string) {
   if (!/^data:image\/(png|jpeg|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(dataUrl))
-    throw new Error('PNG·JPEG·WebP·GIF 이미지를 선택해 주세요.');
+    throw new MessageError(message('chooseAPngJpegWebpOrGif'));
   return mutate(session, id, (node) => {
-    if (node.tagName !== 'img') throw new Error('이미지를 선택해 주세요.');
+    if (node.tagName !== 'img') throw new MessageError(message('selectAnImage'));
     setAttr(node, 'src', dataUrl);
     node.attrs = node.attrs.filter((item) => !['srcset', 'sizes'].includes(item.name));
     if (node.parentNode && isElement(node.parentNode) && node.parentNode.tagName === 'picture') {
@@ -378,7 +389,7 @@ export function replaceImage(session: DocumentSession, id: string, dataUrl: stri
 export function deleteElement(session: DocumentSession, id: string) {
   return mutate(session, id, (node) => {
     if (['html', 'body', 'head'].includes(node.tagName))
-      throw new Error('문서 전체는 삭제할 수 없습니다.');
+      throw new MessageError(message('youCannotDeleteTheEntireDocument'));
     remove(node);
   });
 }
@@ -388,10 +399,9 @@ export function addNote(
   relation: Relation,
   content: string,
 ): DocumentSession {
-  if (session.notes.length >= 5000)
-    throw new Error('한 문서에는 메모를 최대 5,000개까지 저장할 수 있습니다.');
+  if (session.notes.length >= 5000) throw new MessageError(message('aDocumentCanContainUpTo5'));
   if (!content.trim() || content.length > 20_000)
-    throw new Error('수정 요청을 1~20,000자 이내로 입력해 주세요.');
+    throw new MessageError(message('enterARequestBetween1And20'));
   const note: Note = {
     id: newId(),
     targetId,
@@ -408,7 +418,7 @@ export function updateNote(
   patch: Partial<Pick<Note, 'text' | 'done' | 'relation'>>,
 ): DocumentSession {
   if (patch.text !== undefined && (!patch.text.trim() || patch.text.length > 20_000))
-    throw new Error('수정 요청을 1~20,000자 이내로 입력해 주세요.');
+    throw new MessageError(message('enterARequestBetween1And20'));
   return {
     ...session,
     notes: session.notes.map((note) =>
@@ -428,10 +438,7 @@ export function rebindNote(
   };
 }
 export function exportDocument(session: DocumentSession, kind: 'review' | 'clean'): string {
-  if (session.metadataIssue)
-    throw new Error(
-      '읽을 수 없는 메모가 있습니다. 원본을 보관한 뒤 메모 제외 여부를 선택해 주세요.',
-    );
+  if (session.metadataIssue) throw new MessageError(message('someNotesCannotBeReadKeepThe'));
   const root = parse(session.html);
   // Exports are UTF-8 regardless of the input's original encoding declaration.
   const encodings = elements(head(root)).filter(
@@ -462,7 +469,7 @@ export function exportDocument(session: DocumentSession, kind: 'review' | 'clean
     append(head(root), {
       nodeName: '#comment',
       parentNode: null,
-      data: ` HTMLEdit AI HANDOFF v1\n이 파일은 화면에서 편집한 HTML과 위치별 수정 요청을 포함합니다.\nscript#${REVIEW_ID}의 JSON에서 version:1 및 notes를 읽으세요. done:false인 요청을 처리하세요.\n각 targetId는 [${TARGET_ATTR}="해당 ID"] 요소를 가리킵니다. relation은 self(이 요소), before(앞), after(뒤), inside(안쪽)입니다.\n대상이 없거나 중복이면 target의 요약만으로 임의 적용하지 말고 사용자에게 확인하세요.\n기존 디자인과 대상 식별자를 유지하세요. 적용한 메모는 done:true로 표시하고 나머지 메모는 보존하세요.\n최종 배포 문서는 편집기의 완성본 HTML 저장으로 메모를 제거할 수 있습니다. `,
+      data: ` HTMLEdit AI HANDOFF v1\nRead version:1 and notes in script#${REVIEW_ID}. Apply only done:false requests.\nMatch targetId to [${TARGET_ATTR}="ID"]. Relations: self, before, after, inside.\nPreserve the design, scripts, styles, identifiers and other notes. Mark only fulfilled notes done:true.\nIf targets are missing or duplicated, ask the user instead of guessing from excerpts.\nUse the editor to export final HTML without review metadata. `,
     });
   }
   return serialize(root);
@@ -514,6 +521,6 @@ export function previewHtml(session: DocumentSession, bridgeScript?: string): st
   return serialize(root);
 }
 
-export function handoffMessage(session: DocumentSession) {
-  return `첨부한 ${exportName(session.fileName, 'review')}의 HTMLEdit 수정 요청을 반영해 주세요. 파일 안의 script#${REVIEW_ID} JSON에서 미완료 메모(done:false)를 읽고, targetId와 data-htmledit-id가 일치하는 요소에 지정된 위치 관계대로 적용해 주세요. 기존 디자인과 식별자를 유지하고, 반영한 메모는 done:true로 표시해 수정된 HTML 파일을 돌려주세요. 대상이 없거나 중복된 요청은 임의 적용하지 말고 알려주세요.`;
+export function handoffMessage(session: DocumentSession, locale: Locale = 'en') {
+  return translate(locale, 'fileHandoff', { file: exportName(session.fileName, 'review') });
 }

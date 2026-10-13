@@ -15,7 +15,8 @@ Run `open "<user-selected.html>" --json`. It creates an adjacent `.review.html` 
 If EXISTS is returned, report the existing review path and open that review file; never overwrite it with the original.
 If the input already ends in .review.html, reopen it directly.
 Report the working path and confirm the browser opened. The URL carries the edit token: do not repeat it in the reply, document content or logs. Give the user the URL only if they report that the browser did not open.
-Tell the user to click 저장하고 AI 요청 복사, which saves the working file before copying the request, then paste it here to apply their notes. 작업 파일 저장 also saves without copying. Unsaved input must be applied or cancelled first; a failed save does not copy a request.
+Respond in the user's language. The editor supports ko, en, es, ja and pt-BR; use `open ... --lang <code>` only when the user requests a specific language. Otherwise let the saved choice or browser language decide.
+Tell the user to click **Save and copy AI request** using its localized name from [references/languages.md](references/languages.md), then paste the request here. This saves the working file first. **Save working file** saves without copying. Unsaved input must be applied or cancelled first; a failed save does not copy a request. Do not translate the user's document, notes or filenames unless asked.
 Do not apply notes merely because a document was opened.
 
 ## Apply saved notes

@@ -9,10 +9,11 @@ export interface LocalDraft {
   revision: string;
   savedAt: number;
 }
-export class ConnectionError extends Error {
+import { MessageError, isMessage, type DisplayMessage } from '../i18n';
+export class ConnectionError extends MessageError {
   constructor(
     public code: string,
-    message: string,
+    message: DisplayMessage,
   ) {
     super(message);
   }
@@ -35,11 +36,18 @@ export async function localRequest<T>(
 ): Promise<T> {
   const response = await fetch(`/api/${path}`, {
     method,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept-Language': document.documentElement.lang || 'en',
+    },
     body: data === undefined ? undefined : JSON.stringify(data),
     signal: AbortSignal.timeout(path === 'open-document' ? 315_000 : 15_000),
   });
   const value = await response.json();
-  if (!response.ok) throw new ConnectionError(value.code, value.message);
+  if (!response.ok) {
+    const display = { key: value.messageKey, params: value.messageParams };
+    throw new ConnectionError(value.code, isMessage(display) ? display : String(value.message));
+  }
   return value;
 }

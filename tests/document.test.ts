@@ -1,3 +1,4 @@
+import { formatMessage } from '../src/i18n';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'parse5';
 import {
@@ -33,8 +34,12 @@ describe('HTML 문서 모델과 왕복 저장', () => {
     const clean = exportDocument(session, 'clean');
     expect(clean).toBe(exportDocument(readDocument(fixture), 'clean'));
     expect(session.fileName).toBe('wireframe.html');
-    expect(session.warnings.some((item) => item.includes('소스 보기'))).toBe(true);
-    expect(session.warnings.some((item) => item.includes('스크립트'))).toBe(true);
+    expect(session.warnings.some((item) => formatMessage('ko', item).includes('소스 보기'))).toBe(
+      true,
+    );
+    expect(session.warnings.some((item) => formatMessage('ko', item).includes('스크립트'))).toBe(
+      true,
+    );
     expect(previewHtml(session)).not.toContain('<script>');
     expect(clean).not.toContain('line-content');
     expect(clean).not.toContain('Line wrap');
@@ -80,12 +85,12 @@ describe('HTML 문서 모델과 왕복 저장', () => {
     expect(
       readDocument(
         '<style>@import "theme.css";p{background:url(./hero.png)}</style><p>문구</p>',
-      ).warnings.some((item) => item.includes('상대 경로')),
+      ).warnings.some((item) => formatMessage('ko', item).includes('상대 경로')),
     ).toBe(true);
     expect(
       readDocument(
         '<style>p{background:url("https://example.com/hero.png")}</style><p>문구</p>',
-      ).warnings.some((item) => item.includes('외부 이미지')),
+      ).warnings.some((item) => formatMessage('ko', item).includes('외부 이미지')),
     ).toBe(true);
   });
   it('원본 head, doctype, 스타일, 스크립트, 중첩 마크업을 유지한다', () => {
@@ -216,7 +221,7 @@ describe('메모 형식과 대상 연결', () => {
       `<p ${TARGET_ATTR}="${target.id}">두 번째</p></body>`,
     );
     const reopened = readDocument(saved);
-    expect(reopened.warnings.some((item) => item.includes('중복'))).toBe(true);
+    expect(reopened.warnings.some((item) => formatMessage('ko', item).includes('중복'))).toBe(true);
     expect(listElements(reopened).filter((item) => item.id === target.id)).toHaveLength(0);
     expect(reopened.notes[0].targetId).toBe(target.id);
   });
@@ -234,7 +239,9 @@ describe('메모 형식과 대상 연결', () => {
   it('중복 메모 블록을 거절한다', () => {
     const block =
       '<script id="htmledit-review" type="application/json">{"version":1,"notes":[]}</script>';
-    expect(readDocument(`<p>원본</p>${block}${block}`).metadataIssue).toContain('중복');
+    expect(
+      formatMessage('ko', readDocument(`<p>원본</p>${block}${block}`).metadataIssue!),
+    ).toContain('중복');
   });
   it('새 변경이 있으면 다시 실행 기록을 지운다', () => {
     let history = createHistory(0);

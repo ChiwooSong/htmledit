@@ -1,136 +1,94 @@
 # HTMLEdit
 
-AI가 만든 HTML을 화면에서 수정하고, 위치별 메모를 담아 다시 전달하는 개인용 편집기입니다. Windows의 Chrome·Edge를 우선 지원합니다.
+[English](README.md) · [한국어](docs/i18n/README.ko.md) · [Español](docs/i18n/README.es.md) · [日本語](docs/i18n/README.ja.md) · [Português (Brasil)](docs/i18n/README.pt-BR.md)
 
-## Claude Code · Codex Skills
+Edit AI-generated HTML visually, leave notes on specific elements, and ask Claude Code or Codex to apply them. HTMLEdit runs locally, without an account or AI API key. Windows Chrome and Edge are the supported desktop environment.
 
-Node.js **22.12 이상**과 로컬에서 실행되는 Claude Code 또는 Codex가 필요합니다. HTMLEdit에 별도 API 키를 넣지 않습니다.
+## Install and open
 
-npm 패키지로 설치:
+Requires Node.js **22.12+** and Claude Code or Codex running on your computer. Run outside a checkout of the HTMLEdit source repository:
 
-```powershell
-npx @woody_s/htmledit@latest install --agent all
-npx @woody_s/htmledit@latest open "./document.html"
+```sh
+npx --yes @woody_s/htmledit@latest install --agent all
+npx --yes @woody_s/htmledit@latest open "./document.html"
 ```
 
-GitHub 릴리스 패키지로 설치할 수도 있습니다:
+Use `--agent claude` or `--agent codex` to install one skill. In your AI conversation, invoke `/htmledit` in Claude Code or `$htmledit` in Codex, or ask to open your HTML with HTMLEdit. Start a new AI session if the skill is not listed. The adjacent `document.review.html` is the working file; your original is preserved. If it already exists, open that review file rather than overwriting it.
 
-```powershell
-npx --yes --package=https://github.com/ChiwooSong/htmledit/releases/download/v1.2.2/woody_s-htmledit-1.2.2.tgz htmledit install --agent all
+## Language
+
+The **Language** menu supports Korean, English, Spanish, Japanese and Brazilian Portuguese. Automatic uses your browser's preferred supported language; unsupported languages fall back to English. Regional variants are matched, for example `es-MX → es` and `pt-PT → pt-BR`.
+
+Manual choices persist across documents and ports in connected mode. Download mode stores the choice for the current browser origin. Return to **Automatic** to follow your browser again. Changing language preserves selections, unsaved text and notes, history and the opened document. Your document, its `lang` attribute, filenames and note content are never translated. Example documents use the language selected when you open them.
+
+CLI help and messages use `--lang`, then the saved manual choice, then the operating-system locale, then English. `open --lang` sets the initial browser language for that opening without changing your saved preference:
+
+```sh
+npx --yes @woody_s/htmledit@latest open "./document.html" --lang ja
+npx --yes @woody_s/htmledit@latest --help --lang es
 ```
 
-`--agent claude` 또는 `--agent codex`로 한 도구만 설치할 수도 있습니다. Claude Code에서는 `/htmledit`, Codex에서는 `$htmledit`를 선택하거나 “이 HTML을 HTMLEdit로 열어줘”라고 요청하세요. 설치 후 보이지 않으면 새 AI 세션을 여세요.
+Supported `--lang` values: `ko`, `en`, `es`, `ja`, `pt-BR` (recognized regional variants also work). Commands, JSON keys, IDs and error codes stay unchanged across languages. Language settings live in `~/.htmledit/preferences.json`, or under `HTMLEDIT_HOME` if configured. A settings-write failure does not discard edits; the current choice may not persist.
 
-1. AI가 원본 옆에 `document.review.html`을 만들고 편집기를 엽니다. 이미 있는 사본은 덮어쓰지 않습니다.
-2. 문구·스타일을 수정하거나 요소에 메모를 남깁니다.
-3. **저장하고 AI 요청 복사**를 누르면 현재 수정과 추가한 메모를 작업 파일에 저장한 뒤 전달 문구를 복사합니다. AI 대화에 붙여넣어 메모 반영을 요청합니다. **작업 파일 저장**으로 저장만 할 수도 있습니다.
-4. AI는 임시 사본을 수정하고 `checkout`/`apply`로 검증·백업한 뒤 작업 파일에 반영합니다. 변경된 파일은 화면에 자동 반영됩니다.
-5. 완료한 요청을 확인하고 **완성본 저장**으로 메모 없는 HTML을 받습니다.
+## Edit and leave notes
 
-연결 모드에서는 상단에 작업 파일의 전체 경로가 표시됩니다. **다른 문서 열기**를 누르면 미저장 작업의 저장 여부를 확인한 뒤 Windows 파일 선택 창에서 새 HTML을 선택할 수 있습니다. 작성 중인 문구나 메모는 먼저 적용하거나 취소해 주세요. 파일 선택 취소·오류 시 현재 작업을 유지하고, 기존 작업 사본이 있으면 덮어쓰지 않고 다시 엽니다. 저장 실패 시에는 전환하지 않습니다. 저장하지 않고 전환한 변경은 기존 문서의 임시 작업으로 보관합니다.
+1. Click an element to change its text, color or font size. Double-click text for inline editing; Ctrl+Enter applies and Esc cancels. IME composition is preserved. Nested emphasis and links remain intact.
+2. Use **Select parent element** for a card or larger region. Delete an element or replace an existing image with PNG, JPEG, WebP or GIF. Replacement images are embedded in the HTML, including responsive-image replacements.
+3. Choose **Add notes**, select an element, choose **This element / Before / After / Inside**, and describe your request. Use notes for new elements and layout changes. Numbered markers connect to the note list.
+4. Apply text inputs and add or save the note, then click **Save and copy AI request**. Connected mode saves the working file before copying its path and request. **Save working file** only saves. In download mode, attach the downloaded review HTML along with the copied request.
+5. Paste the request into your AI conversation. The skill runs `status → checkout → edit candidate → apply → status`. Apply checks the revision, backs up the prior file and updates the connected review. The editor refreshes automatically when there are no unsaved changes.
+6. Inspect the result and completed notes. **Save final HTML** downloads `document.edited.html` without notes or editor IDs. It cannot restore earlier notes when reopened.
 
-새 문서는 같은 탭의 별도 파일 연결로 열립니다. 이전 문서의 서버·백업은 유지됩니다. 문서를 바꾼 뒤에는 **저장하고 AI 요청 복사**로 새 문서의 수정과 메모를 저장하고 작업 경로를 AI 대화에 전달하세요. 파일 선택 창은 Windows에서 지원하며, 다른 환경에서는 AI에게 다른 파일을 열어 달라고 요청할 수 있습니다. 다운로드 방식의 기존 편집기도 계속 사용할 수 있습니다.
+Notes can be edited, deleted, completed, reopened or reassigned. Missing or duplicate targets are not guessed. A fulfilled deletion may leave a completed note with **Target missing**. HTMLEdit does not decide automatically whether a request was fulfilled.
 
-작성 중인 문구는 **문구 적용**, 작성 중인 요청은 **메모 추가** 또는 **메모 수정 저장**으로 먼저 적용해 주세요. 미적용 입력이 있거나 파일 저장에 실패하면 전달 문구를 복사하지 않습니다. 저장 후 클립보드 복사만 실패한 경우에는 사용 방법에 표시되는 전달 문구를 직접 복사할 수 있습니다.
+**Save and copy AI request** stops on unapplied input, save errors, conflicts or changes made while saving. If saving succeeds but clipboard access fails, the help dialog provides the request for manual copying.
 
-### 저장 충돌과 복구
+## Documents, interaction and recovery
 
-- 브라우저와 AI의 쓰기는 파일 내용의 SHA-256 버전을 비교합니다. 오래된 파일을 기준으로 한 저장은 거절합니다.
-- 외부 변경을 발견했을 때 미저장 편집이 있으면 화면을 교체하지 않습니다. **내 작업 별도 저장**으로 보관한 뒤 **디스크 버전 다시 열기**를 선택하세요.
-- 연결 작업의 임시 저장, AI 후보 파일, 변경 전 백업은 작업 파일 옆 `.htmledit/`에 보관합니다. 서버 재시작 후에도 임시 작업을 복구할 수 있습니다. 이 폴더에는 `*`를 담은 `.gitignore`를 함께 만들어 두므로 작업 파일이 Git 저장소 안에 있어도 커밋되지 않습니다.
-- 다운로드 모드는 기존처럼 IndexedDB를 사용합니다. 연결 모드는 포트가 바뀌어도 복구할 수 있도록 로컬 서버의 파일별 임시 저장을 사용합니다.
-- AI 결과를 다시 불러오면 실행 취소 기록을 새로 시작합니다. 이전 결과는 `.htmledit/`의 백업 HTML로 복구할 수 있습니다.
-- 파일을 다른 프로그램에서 직접 쓰는 작업은 HTMLEdit의 쓰기 잠금을 따르지 않습니다. 버전 검사는 대부분의 충돌을 감지하지만, 외부 프로그램의 동시 쓰기를 운영체제 수준에서 잠그지는 않습니다. AI는 반드시 스킬의 `apply` 절차를 사용하세요.
+**Open another document** asks how to handle unsaved work, then opens the Windows file picker. Cancellation or a save failure keeps the current document. Existing review files reopen without being overwritten. Previous document servers and backups remain available. The native picker's standard buttons use the Windows display language.
 
-### 업데이트 · 제거 · 종료
+**Interact** enables menus and tabs in trusted documents. Navigate, then choose **Edit directly** or **Add notes** to keep that screen while editing. **Back to first screen** resets navigation without discarding edits or notes. Classes, styles and visibility of original elements are supported; script-created elements, form values and canvas editing are not. Navigation and scroll state are session-only, while original scripts remain in exports.
 
-새 버전의 설치 명령을 실행하면 스킬을 갱신합니다. 실행 코드는 `~/.htmledit/versions/<version>`에 보관하므로 npx 캐시가 정리되어도 동작합니다. 사용자가 수정한 기존 스킬은 덮어쓰지 않습니다. 설치 명령이 안내하는 해당 폴더를 별도 보관한 뒤 재설치하세요.
+Review HTML keeps invisible IDs, notes and an English AI handoff comment. Ordinary browsers show only the document. Malformed or unsupported note metadata blocks saving. Keep the original before explicitly choosing **Exclude unreadable notes**. Browser source-view HTML is restored to the original document; ordinary code samples are left alone.
 
-설치된 스킬의 `scripts/run.mjs`로 명령을 실행할 수 있습니다. 아래 `<스킬 경로>`는 Claude Code의 `~/.claude/skills/htmledit` 또는 Codex의 `~/.agents/skills/htmledit`입니다.
+Connected drafts, candidates and byte-preserving backups live beside the document in `.htmledit/`. File writes use revision checks. If AI or another program changes the file while you have unsaved edits, **Save my edits separately** before **Reopen disk version**. External programs do not participate in HTMLEdit's write lock. AI must use `apply`, not overwrite the review directly.
 
-```powershell
-node "<스킬 경로>/scripts/run.mjs" stop --file "./document.review.html"
-node "<스킬 경로>/scripts/run.mjs" uninstall --agent all
+Download mode retains one recent draft in IndexedDB for the current origin. Drafts save after roughly 0.6 seconds; save an HTML file for durable storage. Undo/redo retains 50 changes in the current session. Restoring a draft or reloading AI results does not restore old undo history; previous file versions remain in backups.
+
+## Update, stop and uninstall
+
+Repeat the installation command to update. Installed runtimes are pinned under `~/.htmledit/versions/<version>` and survive npm cache cleanup. Start a new editor session after updating. Modified skills are protected: back up the exact folder named in the error before reinstalling.
+
+Use the installed runner at `~/.agents/skills/htmledit/scripts/run.mjs` for Codex or `~/.claude/skills/htmledit/scripts/run.mjs` for Claude Code:
+
+```sh
+node "<skill-directory>/scripts/run.mjs" status --file "./document.review.html" --json
+node "<skill-directory>/scripts/run.mjs" stop --file "./document.review.html"
+node "<skill-directory>/scripts/run.mjs" uninstall --agent all
 ```
 
-제거는 스킬만 지웁니다. 문서·백업·버전별 실행 코드와 실행 중인 서버는 보존합니다. 사용 중인 서버를 먼저 종료하세요. Windows를 우선 검증하며 macOS/Linux의 실제 브라우저 사용은 아직 검증하지 않았습니다.
+Stop active servers first. Uninstall removes managed skills; it preserves documents, backups, settings, runtimes and running servers. A separate cloud AI environment cannot directly access files on your PC. macOS/Linux file pickers and end-to-end browser use are not officially supported in this release.
 
-### 로컬 처리와 AI 사용
+## Supported files and local processing
 
-연결 서버는 `127.0.0.1`에서 지정한 작업 파일만 읽고 씁니다. 연결 URL은 편집 권한을 포함하므로 공유하지 마세요. 문서 내부 스크립트에는 연결 토큰을 제공하지 않습니다. HTMLEdit 자체는 AI 호출·계정 연결·사용량 수집을 하지 않습니다. AI에게 문서를 처리하도록 요청하면 해당 AI 서비스가 파일 내용을 처리하며, 그 서비스의 요금·데이터 정책이 적용됩니다.
+Use a single UTF-8 static HTML file with embedded CSS and images: HTML up to 25MB, replacement images up to 10MB, up to 5,000 notes of 1–20,000 characters each. Exports may normalize HTML syntax while preserving structure. External CSS, images and fonts retain their URLs; related local folders are not collected. React apps, dynamic charts and runtime Tailwind scripts are outside the supported scope. Desktop, 768px and 390px preview widths help inspect responsive layouts.
 
-MIT 라이선스로 배포합니다. 개발·검증 상세는 [Skills 개발 검증 기록](docs/SKILLS_VERIFICATION.md)을 참고하세요.
+Direct-edit and note modes block scripts. Interact runs inline scripts in a separate sandboxed origin; editor storage and connection tokens are not exposed. External scripts, fetch/XHR, forms, popups and top navigation are blocked. Document scripts can still read preview contents and may send information via image/style requests or navigation of their own frame. Use Interact only for trusted documents. Return to the first screen if document navigation disconnects interaction.
 
-## 실행
+The connected server listens on `127.0.0.1` and accesses the selected working file. Do not share its URL: it contains an editing token. HTMLEdit makes no AI calls and collects no usage telemetry. When you ask an AI service to process a document, that service's fees and data policies apply.
 
-Node.js 22.12 이상이 필요합니다. 이 PC에는 Node.js가 설치되어 있습니다.
+## Develop and verify
 
-**`start.cmd`를 더블클릭**하면 필요한 패키지 설치와 빌드를 수행하고 브라우저를 엽니다. 실행 창을 닫거나 Ctrl+C를 누르면 로컬 서버가 종료됩니다. 로그인과 API 키는 필요하지 않습니다.
-
-터미널에서는 다음 순서로 실행합니다.
-
-```powershell
-npm install
+```sh
+npm ci
 npm run build
 npm start
-```
-
-주소: <http://127.0.0.1:5173>. 이미 같은 주소에서 실행 중이면 기존 창을 이용하거나 실행 창을 종료한 뒤 다시 시작하세요. 서로 다른 주소의 브라우저 저장 공간은 공유되지 않습니다.
-
-개발 중에는 `npm run dev`를 사용합니다. 이 다운로드 모드의 서버는 편집기 파일만 제공합니다. Skills 연결 모드는 별도의 로컬 파일 API를 사용합니다. 원래 HTML이 참조하는 외부 스타일·이미지·폰트는 해당 주소로 요청될 수 있습니다.
-
-## 사용
-
-1. `.html` 또는 `.htm` 파일을 끌어다 놓거나 **HTML 열기**로 선택합니다. 파일이 없다면 예제 문서를 열어보세요.
-   Chrome·Edge의 ‘소스 보기’ 화면을 저장한 HTML은 원래 문서를 자동으로 복원해 표시합니다. 일반 문서의 코드 예제는 그대로 유지합니다.
-2. 요소를 클릭하면 오른쪽에서 문구, 글자색, 크기를 수정할 수 있습니다. 문구를 더블클릭하면 제자리에서 편집합니다. **적용**, Ctrl+Enter로 확정하고 **취소**, Esc로 취소합니다. 한글 조합 입력 중에는 단축키로 확정하지 않습니다.
-3. 기존 이미지를 선택해 **이미지 교체**를 누릅니다. PNG·JPEG·WebP·GIF를 지원하며 새 이미지는 HTML 안에 저장됩니다. 반응형 이미지의 기존 source/srcset보다 새 이미지가 표시되도록 교체합니다.
-4. 카드 전체를 선택하려면 **상위 요소 선택**을 사용합니다. 삭제한 요소는 실행 취소로 복원할 수 있습니다.
-5. **메모 남기기**에서 대상 요소를 클릭한 뒤, 이 요소·앞·뒤·안쪽 중 위치를 정하고 요청을 작성합니다. 문서의 번호 표식과 목록이 연결됩니다.
-6. **저장하고 AI 요청 복사**를 누르면 전달용 HTML 다운로드를 시작하고 설명을 복사합니다. 파일과 설명을 Claude Code 또는 ChatGPT에 전달하세요. **AI 전달용 저장**으로 파일만 내려받을 수도 있습니다.
-7. AI가 돌려준 HTML을 다시 열면 보존된 메모와 완료 상태가 복원됩니다. 작업이 끝나면 **완성본 저장**으로 메모가 없는 문서를 저장합니다.
-
-### 메뉴와 탭이 있는 문서
-
-상단의 **문서 조작**을 누르면 문서 내부 메뉴·탭·버튼이 동작합니다. 원하는 화면으로 이동한 뒤 **직접 편집** 또는 **메모 남기기**로 전환하세요. 이동한 화면을 유지한 채 수정할 수 있고, 다시 문서 조작으로 돌아가 다른 화면으로 이동할 수 있습니다. **첫 화면으로**는 조작 상태만 초기화하며 문구 수정과 메모는 유지합니다.
-
-원본 HTML에 있는 요소의 클래스·스타일·숨김 상태를 바꾸는 화면 전환을 지원합니다. 스크립트가 새로 생성한 요소, 입력한 폼 값, 캔버스 내용의 편집은 지원하지 않습니다. 메뉴 선택과 스크롤은 이번 편집 세션의 표시 상태이며 HTML 파일이나 임시 작업에는 저장하지 않습니다. 저장 파일에는 실제 수정과 원본 동작 코드를 보존하므로 다시 열면 시작 화면에서 메뉴로 이동할 수 있습니다.
-
-메모는 수정·삭제·완료·다시 열기가 가능합니다. 대상이 사라지거나 ID가 중복되면 임의 연결하지 않고 **대상 없음**을 표시합니다. 문서에서 새 요소를 선택한 뒤 **대상 재지정**으로 연결하세요. 완료 여부는 AI가 남긴 값 또는 사용자의 처리만 반영합니다.
-
-### 저장과 복구
-
-- `원본명.review.html`: 편집 결과, 요소 식별자, 메모 JSON, AI 처리 안내 주석을 포함합니다. 일반 브라우저에서는 수정된 문서만 표시됩니다.
-- `원본명.edited.html`: 실제 수정만 포함하고 HTMLEdit 메모와 식별자를 제거합니다. 완성본을 다시 열면 기존 메모는 복원되지 않습니다.
-- HTML 저장은 다운로드 방식입니다. 불러온 원본 파일을 직접 덮어쓰지 않습니다.
-- 임시 저장은 약 0.6초 뒤 **현재 주소의 브라우저 저장 공간에 최근 작업 하나**를 보관합니다. 재실행 후 시작 화면에서 복구할 수 있습니다. 장기 보관은 HTML 파일로 저장하세요.
-- 손상되거나 지원하지 않는 버전의 메모는 경고를 표시하고 파일 저장을 막습니다. 원본을 보관한 뒤 **읽을 수 없는 메모 제외**를 선택하면 새 파일을 저장할 수 있습니다.
-- 실행 취소·다시 실행은 현재 작업의 최근 50번 변경을 지원합니다. 임시 복구에는 현재 문서와 메모가 포함되고 이전 실행 취소 기록은 포함되지 않습니다.
-
-### 지원 범위
-
-CSS와 이미지가 포함된 정적 단일 HTML을 기준으로 합니다. 외부 자원은 자동 수집하지 않으며, 관련 폴더 입력·자유 그림·좌표 핀·새 요소 삽입·배치 이동은 후속 범위입니다. 상대 경로 자원과 스크립트 의존성은 화면에서 안내합니다.
-
-직접 편집·메모 모드에서는 스크립트를 실행하지 않습니다. 문서 조작 모드에서는 파일 안의 스크립트와 이벤트를 편집기와 출처가 분리된 프레임에서 실행합니다. 이 프레임은 편집기 화면·브라우저 저장 공간·연결 토큰에 접근할 수 없고, 외부 스크립트 파일 로드, fetch·XHR 요청, 폼 전송, 새 창 열기, 상위 페이지 이동, 외부 링크의 기본 이동, 메타 태그 자동 이동을 차단합니다. 다만 문서 안의 스크립트는 조작 중인 화면의 편집 내용을 읽을 수 있고, 외부 이미지·스타일 요청이나 프레임 자체의 주소 이동으로 외부 주소에 데이터를 보낼 수 있습니다. 브라우저 샌드박스로 막을 수 없는 한계이므로 출처를 신뢰할 수 없는 문서에서는 문서 조작 모드를 사용하지 마세요. 스크립트가 프레임 주소를 바꾸면 조작 연결이 끊어지며, **첫 화면으로**로 다시 시작할 수 있습니다. 원본 스크립트와 이벤트는 저장 결과에 보존합니다. 동적 차트, React 앱, Tailwind 실행 스크립트에 의존하는 화면의 표시·동작은 보장하지 않습니다. 데스크톱·768px·390px 전환은 반응형 배치를 확인하는 기능입니다.
-
-구현은 [MDN의 iframe sandbox 설명](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#sandbox)에 따라 조작 프레임에 `allow-scripts`만, 편집 프레임에 `allow-same-origin`만 사용합니다. 상태 전달은 [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)로 연결한 MessageChannel을 사용하며 전달받은 표시 상태를 문서 모델에 저장하지 않습니다.
-
-입력과 저장 HTML은 UTF-8, 최대 25MB이며 교체 이미지 한 개는 최대 10MB입니다. 이미지와 메모를 포함한 전달용 HTML이 이 크기를 넘으면 해당 변경을 적용하지 않고 안내합니다. 저장하면서 문서 구조에 대한 HTML 표기가 정규화될 수 있습니다. 원본 소스의 공백·따옴표 모양 대신 화면 결과와 구조를 보존하는 기준입니다.
-
-## 예제와 검증
-
-`public/examples/`에 다음 파일을 제공합니다.
-
-- `onyu-studio.html`: 수정 전 정적 예제.
-- `onyu-studio.review.html`: 문구 변경·집 아이콘 추가·설명 삭제 요청 3개가 담긴 전달용 예제.
-- `onyu-studio.ai-result.review.html`: 이 개발 세션의 AI가 메모를 수동으로 읽고 반영한 결과. 외부 Claude/ChatGPT 세션 검증과는 구분합니다.
-
-```powershell
-npm run build
+# development: npm run dev
 npm test
 npm run test:e2e
+npm run test:package
 ```
 
-브라우저 검증은 설치된 Chrome과 Edge를 직접 사용합니다. 해당 브라우저가 없으면 먼저 설치하세요. `npm run check`로 빌드·모델 검증·브라우저 검증을 함께 실행할 수 있습니다. `npm run examples`는 원본과 요청 예제를 재생성하고, `npx tsx scripts/apply-demo-review.ts`는 수동으로 해석한 요청의 반영 결과를 재현합니다.
+The standalone editor uses `http://127.0.0.1:5173`; `start.cmd` also installs, builds and opens it on Windows. Close its terminal or press Ctrl+C to stop it. This mode downloads files rather than connecting to a working path. Chrome and Edge must be installed for browser tests.
 
-메모 형식과 검증 기록은 `docs/`에 있습니다.
+Translated examples are under `public/examples/<language>/` in source and `dist/examples/<language>/` in the package. [`docs/i18n/`](docs/i18n/) contains the translated guides, review format and terminology. See [review format v1](docs/REVIEW_FORMAT.md) and [verification history](docs/SKILLS_VERIFICATION.md). MIT licensed.

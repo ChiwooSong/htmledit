@@ -182,3 +182,59 @@ npm run format:check
 1.2.2 빌드 및 tarball 설치 검증도 통과했습니다. 설치 검증은 Claude·Codex 스킬 설치, 영구 runtime, 문서 열기·서버 재사용, checkout/apply/백업, 재설치, 수정된 스킬 보호, 종료·제거를 포함합니다. 이번 실제 AI 반영은 Codex 데스크톱에서 수행했으며, Claude 세션을 새로 실행한 검증은 아닙니다.
 
 로컬 증거는 `.cache/release-1.2.2-live/`의 `before-ai.review.html`, `before-ai.png`, `after-ai.png`, `checkout.json`, `apply.json`, `verification.json`에 보관했습니다. main의 Windows CI 통과 후 `v1.2.2` 태그를 푸시해 trusted publishing으로 게시합니다. 로컬 `npm publish`는 사용하지 않습니다. 공개 게시 결과와 CI 링크는 [v1.2.2 릴리스](https://github.com/ChiwooSong/htmledit/releases/tag/v1.2.2)에 기록합니다.
+
+## 1.3.0 multilingual candidate verification (2026-10-13)
+
+**Implementation, automated validation, and actual Codex and Claude workflows passed. Claude completed the follow-up using user-selected manual approval mode. This is a local 1.3.0 candidate, not a published release.** Historical verification sections above retain their original language and results.
+
+### Scope and automated evidence
+
+- Added `ko`, `en`, `es`, `ja`, and `pt-BR` for the editor, shared diagnostics, CLI output/help, bundled examples, installation/use/troubleshooting guides, and review-format documentation. English is the fallback. The dictionaries contain matching keys and interpolation slots; TypeScript checks call-site keys and parameters.
+- Connected preferences use authenticated `GET/PUT /api/preferences` and the user's `HTMLEDIT_HOME/preferences.json`. Standalone mode uses origin-local storage. CLI priority is explicit `--lang`, saved manual preference, operating-system locale, then English. A one-time `open --lang` does not overwrite the saved preference.
+- Language changes keep document state, selection, pending text/note input, history, and unsaved changes. Requests carry `Accept-Language`; errors retain stable codes plus message keys/parameters. The document language, user text, note text, filenames, identifiers, review version 1, and CLI JSON field names remain unchanged.
+- Build and unit tests: **51 passed**. Full regression suite: **82 passed** across installed Windows Chrome and Edge. The new 18 browser cases cover all five languages for direct edit → note → save/copy → apply → automatic refresh → clean export, regional language detection, fallback, preference persistence across ports, failed preference saves, and retained inline/draft input. Existing browser tests explicitly use Korean.
+- A follow-up focused run passed **18/18** after fixing duplicate restored diagnostics and stale preference-save notices. The legacy-draft test retains unknown diagnostic text and converts known Korean diagnostics. Test fixtures generated before this change continue to use review version 1.
+- Package smoke test passed for 1.3.0: isolated Claude/Codex installation, version-pinned runtime, all five example/review-format files, translated CLI help, preference priority and temporary overrides, open/reuse, checkout/apply/backups, reinstall protection, stop and uninstall. Both skill format validators passed. No runtime dependency was added.
+
+### Installed candidate: actual Codex desktop use
+
+1. Packed and installed 1.3.0 in `.cache/release-1.3.0-live/user`, leaving the user's installed skills and existing document servers untouched. Opened a separate HTML fixture through that installed Codex skill runner, not the Vite development server.
+2. In the in-app browser, directly edited a paragraph containing Korean, Japanese, Portuguese accents, and an emoji. Switched through all five UI languages and created one element-linked request in each language. Checked Japanese wrapping and longer Spanish/Portuguese controls.
+3. Clicked **Save and copy AI request** without a separate working-file save. All five notes were written to the exact connected review file, and the clipboard request contained its exact path. User-authored text and the original document's `lang="fr"` were preserved.
+4. This Codex desktop task read the installed skill and review-format reference, then used `status → checkout → edit candidate → apply → status`. All five requested heading changes were applied and only those notes were marked done. This was actual AI interpretation/editing in the current Codex task, not a separately launched Codex CLI process.
+5. The already-open tab automatically displayed the five changed headings without a reload. The Portuguese note panel showed **Total 5 · Concluídas 5**. Downloaded final HTML and independently checked that identifiers, note JSON, and the AI handoff comment were absent.
+6. Independent file checks confirmed the requested text, original document content, document language, direct edit, styles, note IDs/text/relations/targets/summaries, surviving element IDs, and a byte-identical pre-apply backup. The review still uses format version 1 and contains no locale setting.
+
+After the final Korean help-text correction, the build, 51 unit tests, two focused legacy-draft browser cases, package smoke test, formatting and unused-code/type checks passed again. Reinstalled the final candidate in the isolated environment and reopened the review on a new port: the saved Portuguese selection and all five completed notes were retained. A byte-for-byte copy of the earlier 1.2.2 live-test review also passed checkout/apply with 1.3.0; this compatibility check used an unchanged candidate, not a new AI edit. Its source file was untouched.
+
+Local evidence: `.cache/release-1.3.0-live/verification.json`, `before-ai.review.html`, `checkout.json`, `apply.json`, `workflow.edited.html`, `before-ai.png`, `after-ai.png`, `es-notes.png`, `ja-notes.png`, and `pt-BR-notes.png`. Authenticated connection URLs and agent logs are kept in ignored local files and must not be published.
+
+### Separate Claude use: initial blocked attempts
+
+The same five pending notes were copied to a separate test review. The installed 1.3.0 Claude skill was supplied to a real Claude Code invocation, with a Spanish request to follow checkout/apply and report in Spanish. Claude exited immediately with **Invalid API key · Fix external API key** before editing. The review bytes were unchanged. No authentication configuration was modified. After the user reported authentication recovery, one CLI retry still failed because the process selected its existing `ANTHROPIC_API_KEY`. The authenticated browser Remote Control session responded normally, so the test continued there.
+
+The browser Claude read the installed skill and format, examined the five notes, verified the local package/runtime, and responded in Spanish. Its automatic approval classifier denied execution of the isolated runner with **Code from External**. The user explicitly approved this test-only scope; that approval was relayed verbatim, but the classifier denied `status`/`checkout` again. Claude stopped without applying any notes. Independent byte comparison at that point confirmed that the review was unchanged and all five notes were still pending. No global permissions or credentials were changed, and no alternate execution mechanism was used to bypass this denial.
+
+At this point browser authentication and the Spanish response were verified, but checkout/apply and automatic refresh had not passed. The follow-up below resolved this test through the normal manual approval flow. Local evidence includes `claude-before-ai.review.html`, `claude-before-ai.png`, `claude-execution-approval.png`, and the updated `verification.json`. These are local validation artifacts, not a published release.
+
+### Separate Claude use: successful manual-approval follow-up
+
+**Result: passed.** The user personally switched the existing Claude Code Remote Control session to manual mode and had explicitly approved this test-only scope. Normal one-time approval prompts were reviewed for the exact fixture and returned candidate; no permanent allow rule, global permission setting, authentication change, or alternate command-execution path was introduced by Codex.
+
+1. Claude used the isolated installed 1.3.0 runner through `run-claude.mjs` for `status → checkout → edit candidate → apply → status`. It independently interpreted the Korean, English, Spanish, Japanese, and Brazilian Portuguese notes. Only the returned candidate was edited, and apply used the original checkout revision.
+2. All five requested heading changes were present and all five notes were marked done. The final response was in Spanish and correctly reported zero pending notes, the backup path, the actual checks, and that visual checking would be performed separately by Codex.
+3. The editor tab had been opened before apply. Without reloading or reopening it, Codex observed all five changed headings and **Hay 0 solicitudes pendientes · Total 5 · Completadas 5**. The original French document language, multilingual direct edit, accents, and emoji remained intact.
+4. Independent `verify-claude.mjs` assertions passed: exact heading text, original SHA-256, note IDs/text/relations/targets/summaries, surviving element IDs, styles, and byte-identical pre-apply backup. The resulting review SHA-256 was `4d565fa6ba0e87c0220709c8d074ec534c299b25fbaeb2bd646ed15cc8ec7bb0`, matching the independently produced Codex result. Before apply it was `32f713761f7322f3df3540b4552471c5b838f517400bb37bc067b7a7734b180a`.
+5. Exported `claude.edited.html` through the Spanish editor and verified that all requested changes were present while editor IDs, note JSON, and the handoff comment were absent.
+
+Local evidence in `.cache/release-1.3.0-live/`: `claude-verification.json`, `verification.json`, `claude-final-report.txt`, `claude-run-receipt.txt`, `claude-before-ai.review.html`, `claude-after-ai.png`, and `claude.edited.html`. The backup is `.htmledit/b04bd8fd5087ca99/backups/1791903725275-c80e3632-813d-44f0-b9bb-6318c73f8595.html` under that folder.
+
+This validates the actual Claude Remote Control workflow in manual approval mode. It does not claim that the separate CLI API-key issue or Claude's automatic-mode classifier restriction was fixed. The application source did not change in this follow-up; full automated suites were not rerun for this documentation-only update. Verification assertions, documentation formatting, diff checks, and the candidate package inventory were checked again.
+
+### Translation review and release boundary
+
+Automated checks verified dictionary completeness, interpolation parity, Unicode handling, examples, and rendered workflow behavior. AI-assisted review checked terminology and repaired four truncated Korean help sentences found during visual inspection. **No native-speaker review was performed** for any added language; technical validation is not a linguistic quality certification. The shared glossary is in `docs/i18n/GLOSSARY.md`.
+
+Windows Chrome/Edge remain the supported environment. Windows picker title/filter strings are localized; native OS button labels follow Windows settings. No macOS/Linux support claim is added. The Vite build reports a non-fatal size advisory for the bundle containing all five dictionaries (about 562 kB minified, 169 kB gzip).
+
+The planned local implementation and functional validation are complete, including both actual AI workflows. No GitHub push, tag, or npm publish was performed in this implementation task. When release is requested, use main CI → `v1.3.0` tag push → trusted publishing → npm/GitHub artifact verification. Never publish locally with `npm publish`.

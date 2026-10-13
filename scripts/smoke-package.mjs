@@ -40,6 +40,10 @@ try {
       /(^|\/)(\.cache|\.htmledit|node_modules|tests|test-results)\//.test(f.path),
     ),
   );
+  for (const locale of ['ko', 'en', 'es', 'ja', 'pt-BR']) {
+    assert(packed.files.some((f) => f.path === 'docs/i18n/REVIEW_FORMAT.' + locale + '.md'));
+    assert(packed.files.some((f) => f.path === 'dist/examples/' + locale + '/onyu-studio.html'));
+  }
   await mkdir(join(temporary, 'consumer'));
   // Exercise npm exec's local-tarball path, which installs and runs the package bin.
   const tarball = join(temporary, packed.filename);
@@ -65,6 +69,28 @@ try {
   const opened = JSON.parse(
     await run(process.execPath, [runner, 'open', original, '--no-browser', '--json']),
   );
+  for (const locale of ['ko', 'en', 'es', 'ja', 'pt-BR']) {
+    const help = await run(process.execPath, [runner, '--help', '--lang', locale]);
+    assert(help.includes('--lang') && help.includes('checkout'));
+    const overridden = JSON.parse(
+      await run(process.execPath, [
+        runner,
+        'open',
+        opened.file,
+        '--no-browser',
+        '--json',
+        '--lang',
+        locale,
+      ]),
+    );
+    assert.equal(new URL(overridden.url).searchParams.get('lang'), locale);
+  }
+  const settings = join(userHome, '.htmledit', 'preferences.json');
+  await writeFile(settings, JSON.stringify({ language: 'es' }));
+  assert((await run(process.execPath, [runner, '--help'])).includes('Los resultados'));
+  assert((await run(process.execPath, [runner, '--help', '--lang', 'ja'])).includes('結果はJSON'));
+  assert.equal(JSON.parse(await readFile(settings, 'utf8')).language, 'es');
+  await assert.rejects(run(process.execPath, [runner, '--help', '--lang', 'xx']), /INPUT/);
   review = opened.file;
   assert(review.endsWith('.review.html'));
   assert((await fetch(opened.url)).ok);

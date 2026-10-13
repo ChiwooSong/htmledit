@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { once } from 'node:events';
@@ -85,7 +85,7 @@ describe('local document transactions', () => {
   it('rejects malformed metadata and duplicate targets without modifying the file', async () => {
     const { store } = await fixture();
     const initial = await store.read();
-    const id = initial.html.match(/data-htmledit-id="([^"]+)"/)![1];
+    const id = listElements(readDocument(initial.html))[0].id;
     const duplicate = initial.html.replace(
       '</body>',
       `<div data-htmledit-id="${id}"></div></body>`,
