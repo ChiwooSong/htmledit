@@ -30,6 +30,41 @@ async function download(page: Page, label: 'AI 전달용 저장' | '완성본 �
   const file = await promise;
   return { name: file.suggestedFilename(), content: await readFile((await file.path())!, 'utf8') };
 }
+async function expectSameRendering(
+  page: Page,
+  before: Buffer,
+  after: Buffer,
+  maxChannelDelta: number,
+) {
+  const difference = await page.evaluate(
+    async (screenshots) => {
+      const pixels = await Promise.all(
+        screenshots.map(async (source) => {
+          const image = new Image();
+          image.src = source;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext('2d')!;
+          context.drawImage(image, 0, 0);
+          return context.getImageData(0, 0, canvas.width, canvas.height);
+        }),
+      );
+      const [a, b] = pixels;
+      let maxChannelDelta = 0;
+      if (a.width === b.width && a.height === b.height) {
+        for (let i = 0; i < a.data.length; i++) {
+          maxChannelDelta = Math.max(maxChannelDelta, Math.abs(a.data[i] - b.data[i]));
+        }
+      }
+      return { sameSize: a.width === b.width && a.height === b.height, maxChannelDelta };
+    },
+    [before, after].map((buffer) => `data:image/png;base64,${buffer.toString('base64')}`),
+  );
+  expect(difference.sameSize).toBe(true);
+  expect(difference.maxChannelDelta).toBeLessThanOrEqual(maxChannelDelta);
+}
 async function note(page: Page, content: string) {
   await page.getByRole('button', { name: '메모 남기기', exact: true }).click();
   await page.frameLocator('iframe').locator('h1').click();
@@ -369,7 +404,8 @@ test('단순 재저장은 시각 결과를 유지하고 AI 메모를 문서에 �
   await page.getByRole('button', { name: '알림 닫기', exact: true }).click();
   await ready();
   const after = await page.locator('iframe').screenshot({ path: testInfo.outputPath('after.png') });
-  expect(after.equals(before)).toBe(true);
+  // macOS link-edge compositing can differ by 7/255 in otherwise identical pixels.
+  await expectSameRendering(page, before, after, process.platform === 'darwin' ? 7 : 0);
   const review = await readFile('public/examples/onyu-studio.review.html', 'utf8');
   await page.goto(`data:text/html;charset=utf-8,${encodeURIComponent(review)}`);
   await expect(page.locator('h1')).toContainText('당신의 일상에');
@@ -479,34 +515,7 @@ test('원본 예제와 완성본의 브라우저 렌더링이 같다', async ({ 
   // macOS can round composited channels by 1–3/255 across identical paints.
   // Compare every decoded pixel with only that channel tolerance, not a budget
   // of missing/shifted pixels or a percentage of allowed visual differences.
-  const difference = await page.evaluate(
-    async (screenshots) => {
-      const pixels = await Promise.all(
-        screenshots.map(async (source) => {
-          const image = new Image();
-          image.src = source;
-          await image.decode();
-          const canvas = document.createElement('canvas');
-          canvas.width = image.width;
-          canvas.height = image.height;
-          const context = canvas.getContext('2d')!;
-          context.drawImage(image, 0, 0);
-          return context.getImageData(0, 0, canvas.width, canvas.height);
-        }),
-      );
-      const [a, b] = pixels;
-      let maxChannelDelta = 0;
-      if (a.width === b.width && a.height === b.height) {
-        for (let i = 0; i < a.data.length; i++) {
-          maxChannelDelta = Math.max(maxChannelDelta, Math.abs(a.data[i] - b.data[i]));
-        }
-      }
-      return { sameSize: a.width === b.width && a.height === b.height, maxChannelDelta };
-    },
-    [before, after].map((buffer) => `data:image/png;base64,${buffer.toString('base64')}`),
-  );
-  expect(difference.sameSize).toBe(true);
-  expect(difference.maxChannelDelta).toBeLessThanOrEqual(3);
+  await expectSameRendering(page, before, after, 3);
 });
 
 test('상위 카드 선택과 문서 안의 실행 취소·다시 실행 단축키', async ({ page }) => {
