@@ -174,7 +174,27 @@ export function interactionBridge(token: string) {
     'click',
     (event) => {
       const anchor = (event.target as Element).closest?.('a');
-      if (anchor && !anchor.getAttribute('href')?.startsWith('#')) event.preventDefault();
+      if (anchor) {
+        // In srcdoc, even a fragment-only URL resolves against the editor URL.
+        // Never navigate the sandbox to that URL; handle document anchors locally.
+        event.preventDefault();
+        const href = anchor.getAttribute('href')?.trim();
+        if (href?.startsWith('#')) {
+          let name = href.slice(1);
+          try {
+            name = decodeURIComponent(name);
+          } catch {
+            // A literal percent sign can be a valid document ID.
+          }
+          const target =
+            document.getElementById(name) ??
+            Array.from(document.querySelectorAll('a[name]')).find(
+              (element) => element.getAttribute('name') === name,
+            );
+          if (target) target.scrollIntoView({ block: 'start' });
+          else if (!name || name.toLowerCase() === 'top') scrollTo({ top: 0, left: 0 });
+        }
+      }
       schedule();
     },
     true,

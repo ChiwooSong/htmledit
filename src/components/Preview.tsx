@@ -116,6 +116,20 @@ export default function Preview(props: Props) {
     measure();
   }, [props.selectedId, props.session.notes, props.width, ready, measure]);
   useEffect(() => {
+    // Scrolling alone does not change srcDoc, so onLoad will not run when the
+    // interactive view hands the same document back to the editing frame.
+    if (interacting || !viewState) return;
+    frame.current?.contentWindow?.scrollTo(viewState.x, viewState.y);
+    for (const [id, view] of Object.entries(viewState.elements)) {
+      const target = getTarget(id);
+      if (target) {
+        target.scrollLeft = view.x;
+        target.scrollTop = view.y;
+      }
+    }
+    measure();
+  }, [interacting, viewState, ready, measure]);
+  useEffect(() => {
     if (props.jump) {
       getTarget(props.jump.id)?.scrollIntoView({ block: 'center', behavior: 'instant' });
       measure();

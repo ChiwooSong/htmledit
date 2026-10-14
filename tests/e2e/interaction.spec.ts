@@ -30,6 +30,60 @@ async function interact(page: Page) {
   await expect(page.getByText('문서 조작 준비 중…')).toHaveCount(0);
 }
 
+test('문서 목차의 앵커는 서버로 이동하지 않고 해당 위치와 편집 화면을 유지한다', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await open(
+    page,
+    `<!doctype html><html><head><style>
+    nav {position:fixed;top:0;background:white;z-index:2} section{height:1200px;scroll-margin-top:50px}
+    </style></head><body><nav>
+    <a href="#summary">Summary</a><a href="#details"><span>Details</span></a>
+    <a href="#%ED%95%9C%EA%B8%80">Unicode</a><a href="#legacy">Legacy</a>
+    <a href="#bad%">Percent</a><a href="#missing">Missing</a><a href="#">Top</a>
+    </nav><section id="summary"><h1>Summary heading</h1></section>
+    <section id="details"><h2>Details heading</h2></section><section id="한글"><h2>한글 제목</h2></section>
+    <section><a name="legacy">Legacy heading</a></section><section id="bad%">Percent heading</section>
+    </body></html>`,
+  );
+  const navigations: string[] = [];
+  await interact(page);
+  await expect(live(page).locator('#summary')).toBeVisible();
+  page.on('framenavigated', (frame) => navigations.push(frame.url()));
+  for (const [label, selector] of [
+    ['Details', '#details'],
+    ['Unicode', '[id="한글"]'],
+    ['Legacy', 'a[name="legacy"]'],
+    ['Percent', '[id="bad%"]'],
+    ['Summary', '#summary'],
+  ]) {
+    await live(page).getByRole('link', { name: label, exact: true }).click();
+    await expect(live(page).locator(selector)).toBeInViewport();
+    await expect(live(page).locator('body')).toBeVisible();
+  }
+  await live(page).getByRole('link', { name: 'Missing', exact: true }).click();
+  await live(page).getByRole('link', { name: 'Details', exact: true }).press('Enter');
+  await expect(live(page).locator('#details h2')).toBeInViewport();
+  await page.getByRole('button', { name: '직접 편집', exact: true }).click();
+  await expect(editable(page).locator('#details h2')).toBeInViewport();
+  await editable(page).locator('#details h2').click();
+  await expect(page.getByRole('textbox', { name: '문구 1', exact: true })).toHaveValue(
+    'Details heading',
+  );
+  await interact(page);
+  await live(page).getByRole('link', { name: 'Top', exact: true }).click();
+  await expect(live(page).locator('#summary h1')).toBeInViewport();
+  expect(navigations.filter((url) => url !== 'about:srcdoc')).toEqual([]);
+  expect(errors).toEqual([]);
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: '완성본 저장', exact: true }).click();
+  const html = await readFile((await (await downloaded).path())!, 'utf8');
+  expect(html).toContain('href="#details"');
+  expect(html).not.toContain('htmledit-connect');
+});
+
 test('정렬된 소스 보기 파일의 메뉴로 전체 채팅 화면에 이동한다', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
