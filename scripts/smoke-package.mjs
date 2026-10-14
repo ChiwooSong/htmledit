@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, mkdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -123,6 +123,12 @@ try {
   // Installer works without the npx cache: its script resolves the persistent runtime.
   assert((await readFile(runner, 'utf8')).includes('/.htmledit/versions/'));
   await run(process.execPath, [runner, 'install', '--agent', 'all']);
+  // macOS /var aliases /private/var; equivalent paths must not trigger self-copy.
+  const aliasHome = join(temporary, 'user-alias');
+  await symlink(userHome, aliasHome, process.platform === 'win32' ? 'junction' : 'dir');
+  await run(process.execPath, [runner, 'install', '--agent', 'all'], {
+    env: { ...env, HTMLEDIT_USER_HOME: aliasHome, HTMLEDIT_HOME: join(aliasHome, '.htmledit') },
+  });
   await writeFile(
     join(userHome, '.agents', 'skills', 'htmledit', 'SKILL.md'),
     '\nuser customization',
@@ -149,6 +155,7 @@ try {
           'open/reuse',
           'checkout/apply/backup',
           'reinstall',
+          'reinstall through a directory alias',
           'modified-skill protection',
           'stop',
           'uninstall',

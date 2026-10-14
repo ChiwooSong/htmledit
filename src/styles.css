@@ -1352,3 +1352,66 @@ svg {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.image-panel {
+  display: grid;
+  gap: 14px;
+}
+.image-panel h3 {
+  margin: 0;
+}
+.image-panel label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.image-panel input:not([type='file']),
+.image-panel select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #c7cfc5;
+  border-radius: 6px;
+  background: white;
+  color: #263427;
+}
+.image-paste {
+  padding: 20px 12px;
+  border: 2px dashed #a4b59d;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #f5f8f2;
+}
+.image-paste:focus {
+  outline: 3px solid #567c3b;
+  outline-offset: 2px;
+}
+.image-thumbnail {
+  padding: 10px;
+  background: #edf1e9;
+  border-radius: 8px;
+}
+.image-thumbnail img {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  margin: auto;
+  object-fit: contain;
+}
+.image-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.image-error {
+  color: #9e2b24;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.image-insertion-outline {
+  border-color: #935cc8;
+}
+.image-insertion-outline span {
+  background: #70409c;
+}

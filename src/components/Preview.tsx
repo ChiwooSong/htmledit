@@ -5,6 +5,7 @@ import InteractivePreview from './InteractivePreview';
 import { applyViewState, type ViewState } from '../preview/interaction';
 
 interface Props {
+  insertion?: 'before' | 'after' | 'inside' | 'self';
   session: DocumentSession;
   selectedId: string | null;
   mode: 'select' | 'note' | 'interact';
@@ -288,8 +289,21 @@ export default function Preview(props: Props) {
         )}
         <div className="overlay-layer" aria-hidden="true" hidden={interacting}>
           {selectionRect && (
-            <div className="selection-outline" style={selectionRect}>
-              <span>{t('selected')}</span>
+            <div
+              className={`selection-outline ${props.insertion ? 'image-insertion-outline' : ''}`}
+              style={
+                props.insertion && props.insertion !== 'self'
+                  ? {
+                      ...selectionRect,
+                      height: 3,
+                      top:
+                        selectionRect.top +
+                        (props.insertion === 'before' ? 0 : selectionRect.height),
+                    }
+                  : selectionRect
+              }
+            >
+              <span>{t(props.insertion ? 'imagePreview' : 'selected')}</span>
             </div>
           )}
         </div>

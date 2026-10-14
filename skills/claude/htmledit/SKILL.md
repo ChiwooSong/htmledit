@@ -8,6 +8,7 @@ description: Open a local HTML file in HTMLEdit for visual edits and element-lin
 Use the bundled local tool to share a review HTML file with the user's browser.
 Run `node "<this-skill-directory>/scripts/run.mjs" <command>`; resolve the path from this skill, never from the user's current directory.
 Node.js 22.12+ is required. The installed runtime is version-pinned and does not call an AI API.
+For Ubuntu/WSLg, macOS, or SSH/headless use, read [references/platforms.md](references/platforms.md) before opening a document.
 
 ## Open a document
 

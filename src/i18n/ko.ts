@@ -1,5 +1,11 @@
 import type { Catalog } from './types';
 export default {
+  pickerNeedsDesktop:
+    '파일을 선택하려면 서버 컴퓨터에 활성 데스크톱 세션이 필요합니다. 화면이 없는 환경에서는 CLI의 --no-browser 옵션으로 파일을 여세요.',
+  pickerToolMissing:
+    '파일 선택 도구 {tool}이 없습니다. Ubuntu에서는 zenity와 xdg-utils를 설치한 뒤 다시 시도하세요. 문서는 변경되지 않았습니다.',
+  pickerPlatformUnsupported:
+    '파일 선택은 데스크톱 세션이 있는 Windows, macOS, Ubuntu에서 사용할 수 있습니다.',
   connectingToTheWorkingFile: '작업 파일에 연결 중…',
   draftReady: '임시 저장 준비',
   htmlNotSavedYet: 'HTML 저장 전',
@@ -36,14 +42,14 @@ export default {
   couldNotVerifyTheNewDocumentConnection: '새 문서 연결 주소를 확인할 수 없습니다.',
   couldNotOpenTheNewDocumentYour: '새 문서를 열지 못했습니다. 현재 작업은 유지됩니다.',
   applyOrCancelTheTextOrNote:
-    '작성 중인 문구나 메모를 먼저 적용하거나 취소한 뒤 다른 문서를 열어 주세요.',
+    '작성 중인 문구·메모·이미지를 먼저 적용하거나 취소한 뒤 다른 문서를 열어 주세요.',
   saveYourCurrentWork: '현재 작업을 저장할까요?',
   thereAreUnsavedChangesChooseWhetherTo:
-    '아직 작업 파일에 저장하지 않은 변경이 있습니다. 저장 여부를 선택한 다음 Windows 파일 선택 창에서 다른 HTML을 고르세요. 파일 선택을 취소하면 현재 문서는 유지됩니다.',
+    '아직 작업 파일에 저장하지 않은 변경이 있습니다. 저장 여부를 선택한 다음 운영체제 파일 선택 창에서 다른 HTML을 고르세요. 파일 선택을 취소하면 현재 문서는 유지됩니다.',
   saveAndChooseDocument: '저장 후 문서 선택',
   chooseWithoutSaving: '저장하지 않고 문서 선택',
   applyOrCancelTheTextOrNote34:
-    '작성 중인 문구나 메모를 먼저 적용하거나 취소한 뒤 AI 요청을 복사해 주세요.',
+    '작성 중인 문구·메모·이미지를 먼저 적용하거나 취소한 뒤 AI 요청을 복사해 주세요.',
   yourWorkChangedWhileSavingApplyThe:
     '저장 중 작업이 변경됐습니다. 변경을 적용한 뒤 AI 요청을 다시 복사해 주세요.',
   workingFileSavedAndAiRequestCopied:
@@ -71,9 +77,9 @@ export default {
   editDirectly: '직접 편집',
   addNotes: '메모 남기기',
   undo: '실행 취소',
-  undoCtrlZ: '실행 취소 Ctrl+Z',
+  undoCtrlZ: '실행 취소 Ctrl/Cmd+Z',
   redo: '다시 실행',
-  redoCtrlShiftZ: '다시 실행 Ctrl+Shift+Z',
+  redoCtrlShiftZ: '다시 실행 Ctrl/Cmd+Shift+Z',
   saveFinalHtml: '완성본 저장',
   saving: '저장 중…',
   saveWorkingFile: '작업 파일 저장',
@@ -195,7 +201,7 @@ export default {
   aSingleHtmlFileWithEmbeddedCss: 'CSS와 이미지가 포함된 단일 HTML 문서를 권장합니다.',
   makeSimpleEditsYourself: '간단한 수정은 직접 하세요.',
   clickAnElementOrDoubleClickText:
-    '요소를 클릭해 선택하거나 문구를 더블클릭하세요. 문구 입력 중 Ctrl+Enter로 적용하고 Esc로 취소합니다. 카드 전체는 ‘상위 요소 선택’으로 지정하세요.',
+    '요소를 클릭해 선택하거나 문구를 더블클릭하세요. 문구 입력 중 Ctrl/Cmd+Enter로 적용하고 Esc로 취소합니다. 카드 전체는 ‘상위 요소 선택’으로 지정하세요.',
   leaveNotesForComplexChanges: '복잡한 작업은 메모로 남기세요.',
   selectAnElementAndDescribeTheChange:
     '원하는 요소를 선택하고 앞·뒤·안쪽 등 위치와 요청을 입력하세요.',
@@ -210,7 +216,7 @@ export default {
   gotIt: '알겠습니다',
   connectingAnotherDocument: '다른 문서 연결 중',
   selectAnHtmlDocumentInTheWindows:
-    'Windows 파일 선택 창에서 HTML 문서를 선택하거나 취소해 주세요. 저장과 새 문서 연결이 끝날 때까지 현재 작업을 유지합니다.',
+    '운영체제 파일 선택 창에서 HTML 문서를 선택하거나 취소해 주세요. 저장과 새 문서 연결이 끝날 때까지 현재 작업을 유지합니다.',
   useMenusAndButtonsToNavigateThen:
     '메뉴와 버튼을 눌러 이동하세요. 원하는 화면에서 직접 편집을 선택하세요. 문서의 스크립트가 실행되므로 신뢰하는 문서에서만 사용하세요.',
   youAreEditingTheCurrentScreenUse:
@@ -261,7 +267,7 @@ export default {
   chooseAnHtmlOrHtmFile: '.html 또는 .htm 파일을 선택해 주세요.',
   chooseAnHtmlFileUpTo25mb: 'HTML 파일은 25MB 이하로 선택해 주세요.',
   chooseAnHtmlFileSavedAsUtf: 'UTF-8로 저장된 HTML을 선택해 주세요.',
-  chooseAReplacementImageUpTo10mb: '교체할 이미지는 10MB 이하로 선택해 주세요.',
+  chooseAReplacementImageUpTo10mb: '이미지는 10MB 이하로 선택해 주세요.',
   couldNotReadTheImageFile: '이미지 파일을 읽을 수 없습니다.',
   anotherWindowIsUsingDraftStorage: '다른 창에서 임시 저장 공간을 사용 중입니다.',
   couldNotFinishSavingTheDraft: '임시 저장을 완료하지 못했습니다.',
@@ -358,5 +364,39 @@ export default {
   localWorkspace: '로컬 작업 공간',
   fromAi: 'AI가 만들고, 내가 다듬는 문서',
   quickGuide: 'HTML EDIT · 간단 사용 안내',
+  imageInsert: '이미지 삽입',
+  imageSelectTarget: '이미지를 넣을 위치를 먼저 선택하세요.',
+  imagePosition: '삽입 위치',
+  imageInsideLast: '안쪽 마지막',
+  imageInvalidPosition:
+    '이 위치에는 이미지를 넣을 수 없습니다. 콘텐츠 영역, 표의 셀, 목록 항목 또는 상위 요소를 선택하세요.',
+  imageChooseFile: '이미지 파일 선택',
+  imageDropPaste: '여기에 이미지 한 개를 놓거나 Ctrl+V / Cmd+V로 붙여넣으세요.',
+  imageOneOnly: '이미지는 한 번에 한 개씩 추가하세요.',
+  imagePasteFile:
+    '이미지를 복사한 뒤 여기에 붙여넣으세요. 텍스트와 HTML은 이미지로 삽입하지 않습니다.',
+  imageUrl: '이미지 URL',
+  imageFetch: '이미지 가져오기',
+  imageInvalidUrl: '로그인 정보가 없는 HTTP 또는 HTTPS 직접 이미지 주소를 입력하세요.',
+  imageUrlFailed:
+    '이미지를 가져오지 못했습니다. 사이트가 다운로드를 차단할 수 있습니다. 로컬 파일이나 이미지 붙여넣기를 사용하세요.',
+  imageUrlTimeout:
+    '이미지 다운로드 시간이 초과되었습니다. 로컬 파일이나 이미지 붙여넣기를 사용하세요.',
+  imageInvalidData: '파일을 지정된 형식의 이미지로 읽을 수 없습니다.',
+  imageSizing: '이미지 크기',
+  imageOriginal: '원본 크기 (영역에 맞춤)',
+  imagePercent: '영역 대비 너비',
+  imageWidth: '너비 (%)',
+  imageInvalidSize: '너비는 1–100%로 입력하고 정렬을 선택하세요.',
+  imageAlignment: '이미지 정렬',
+  imageLeft: '왼쪽',
+  imageCenter: '가운데',
+  imageRight: '오른쪽',
+  imageAlt: '대체 텍스트',
+  imagePreview: '이미지 미리보기 · 적용 전',
+  imageProperties: '이미지 크기·정렬',
+  imageApply: '이미지 적용',
+  imageEmbeddedHint:
+    'PNG·JPEG·WebP·GIF · 이미지당 최대 10MB. HTML 안에 포함되며 HTML 전체는 최대 25MB입니다.',
   appTitle: 'HTMLEdit · 화면에서 고치고, 메모로 전달하세요',
 } satisfies Catalog;

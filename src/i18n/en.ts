@@ -1,4 +1,10 @@
 export const en = {
+  pickerNeedsDesktop:
+    'File selection requires an active desktop session on the server computer. In a headless session, open the file with the CLI using --no-browser.',
+  pickerToolMissing:
+    'The file selection tool {tool} is missing. On Ubuntu, install zenity and xdg-utils, then try again. Your document is unchanged.',
+  pickerPlatformUnsupported:
+    'File selection is available on Windows, macOS, and Ubuntu with a desktop session.',
   connectingToTheWorkingFile: 'Connecting to the working file…',
   draftReady: 'Draft ready',
   htmlNotSavedYet: 'HTML not saved yet',
@@ -35,14 +41,14 @@ export const en = {
   couldNotOpenTheNewDocumentYour:
     'Could not open the new document. Your current work is preserved.',
   applyOrCancelTheTextOrNote:
-    'Apply or cancel the text or note you are writing before opening another document.',
+    'Apply or cancel the text, note or image you are editing before opening another document.',
   saveYourCurrentWork: 'Save your current work?',
   thereAreUnsavedChangesChooseWhetherTo:
-    'There are unsaved changes. Choose whether to save, then select another HTML file in the Windows file picker. Cancelling the picker keeps this document open.',
+    'There are unsaved changes. Choose whether to save, then select another HTML file in the system file picker. Cancelling the picker keeps this document open.',
   saveAndChooseDocument: 'Save and choose document',
   chooseWithoutSaving: 'Choose without saving',
   applyOrCancelTheTextOrNote34:
-    'Apply or cancel the text or note you are writing before copying the AI request.',
+    'Apply or cancel the text, note or image you are editing before copying the AI request.',
   yourWorkChangedWhileSavingApplyThe:
     'Your work changed while saving. Apply the changes, then copy the AI request again.',
   workingFileSavedAndAiRequestCopied:
@@ -70,9 +76,9 @@ export const en = {
   editDirectly: 'Edit directly',
   addNotes: 'Add notes',
   undo: 'Undo',
-  undoCtrlZ: 'Undo Ctrl+Z',
+  undoCtrlZ: 'Undo Ctrl/Cmd+Z',
   redo: 'Redo',
-  redoCtrlShiftZ: 'Redo Ctrl+Shift+Z',
+  redoCtrlShiftZ: 'Redo Ctrl/Cmd+Shift+Z',
   saveFinalHtml: 'Save final HTML',
   saving: 'Saving…',
   saveWorkingFile: 'Save working file',
@@ -195,7 +201,7 @@ export const en = {
   aSingleHtmlFileWithEmbeddedCss: 'A single HTML file with embedded CSS and images works best.',
   makeSimpleEditsYourself: 'Make simple edits yourself.',
   clickAnElementOrDoubleClickText:
-    'Click an element or double-click text. Use Ctrl+Enter to apply text and Esc to cancel. Use Select parent element to select a whole card.',
+    'Click an element or double-click text. Use Ctrl/Cmd+Enter to apply text and Esc to cancel. Use Select parent element to select a whole card.',
   leaveNotesForComplexChanges: 'Leave notes for complex changes.',
   selectAnElementAndDescribeTheChange:
     'Select an element and describe the change and position: before, after or inside.',
@@ -210,7 +216,7 @@ export const en = {
   gotIt: 'Got it',
   connectingAnotherDocument: 'Connecting another document',
   selectAnHtmlDocumentInTheWindows:
-    'Select an HTML document in the Windows file picker or cancel. Your current work stays in place until saving and connecting are complete.',
+    'Select an HTML document in the system file picker or cancel. Your current work stays in place until saving and connecting are complete.',
   useMenusAndButtonsToNavigateThen:
     'Use menus and buttons to navigate, then choose Edit directly. Document scripts run in this mode; use it only with documents you trust.',
   youAreEditingTheCurrentScreenUse:
@@ -261,7 +267,7 @@ export const en = {
   chooseAnHtmlOrHtmFile: 'Choose an .html or .htm file.',
   chooseAnHtmlFileUpTo25mb: 'Choose an HTML file up to 25MB.',
   chooseAnHtmlFileSavedAsUtf: 'Choose an HTML file saved as UTF-8.',
-  chooseAReplacementImageUpTo10mb: 'Choose a replacement image up to 10MB.',
+  chooseAReplacementImageUpTo10mb: 'Choose an image up to 10MB.',
   couldNotReadTheImageFile: 'Could not read the image file.',
   anotherWindowIsUsingDraftStorage: 'Another window is using draft storage.',
   couldNotFinishSavingTheDraft: 'Could not finish saving the draft.',
@@ -357,5 +363,37 @@ export const en = {
   localWorkspace: 'LOCAL WORKSPACE',
   fromAi: 'FROM AI TO YOUR HANDS',
   quickGuide: 'HTML EDIT · QUICK GUIDE',
+  imageInsert: 'Insert image',
+  imageSelectTarget: 'Select where to insert the image first.',
+  imagePosition: 'Insertion position',
+  imageInsideLast: 'At the end inside',
+  imageInvalidPosition:
+    'Choose a content container, table cell, list item, or parent element. Images cannot be inserted at this position.',
+  imageChooseFile: 'Choose image file',
+  imageDropPaste: 'Drop one image here or paste with Ctrl+V / Cmd+V.',
+  imageOneOnly: 'Add one image at a time.',
+  imagePasteFile: 'Copy an image, then paste it here. Text and HTML are not inserted as images.',
+  imageUrl: 'Image URL',
+  imageFetch: 'Load image',
+  imageInvalidUrl: 'Enter a direct HTTP or HTTPS image URL without login credentials.',
+  imageUrlFailed:
+    'Could not retrieve the image. The site may block downloads. Use a local file or paste an image.',
+  imageUrlTimeout: 'Image download timed out. Try a local file or paste an image.',
+  imageInvalidData: 'This file could not be decoded as the specified image type.',
+  imageSizing: 'Image size',
+  imageOriginal: 'Original size (fit container)',
+  imagePercent: 'Percentage of container width',
+  imageWidth: 'Width (%)',
+  imageInvalidSize: 'Enter a width from 1 to 100 percent and a valid alignment.',
+  imageAlignment: 'Image alignment',
+  imageLeft: 'Left',
+  imageCenter: 'Center',
+  imageRight: 'Right',
+  imageAlt: 'Alternative text',
+  imagePreview: 'Image preview — not applied',
+  imageProperties: 'Image size and alignment',
+  imageApply: 'Apply image',
+  imageEmbeddedHint:
+    'PNG, JPEG, WebP or GIF · Up to 10MB per image. Embedded in HTML; total HTML limit: 25MB.',
   appTitle: 'HTMLEdit · Edit visually, share notes',
 } as const;

@@ -33,6 +33,7 @@ import {
   Hand,
 } from 'lucide-react';
 import Preview from './components/Preview';
+import ImagePanel, { type ImageRequest, type ImagePreview } from './components/ImagePanel';
 import { exampleHtml } from './example';
 import {
   addNote,
@@ -45,7 +46,6 @@ import {
   listElements,
   readDocument,
   rebindNote,
-  replaceImage,
   RELATIONS,
   updateNote,
   type DocumentSession,
@@ -54,7 +54,7 @@ import {
 } from './model/document';
 import { commit, createHistory, redo, undo, type History } from './model/history';
 import { deleteDraft, loadDraft, saveDraft, type Draft } from './io/drafts';
-import { assertHtmlSize, downloadHtml, readHtmlFile, readImageFile } from './io/files';
+import { assertHtmlSize, downloadHtml, readHtmlFile } from './io/files';
 import {
   connectionToken,
   localRequest,
@@ -127,7 +127,23 @@ export default function App() {
   const [help, setHelp] = useState(false);
   const [reading, setReading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const imageInput = useRef<HTMLInputElement>(null);
+  const [imageRequest, setImageRequest] = useState<ImageRequest | null>(null);
+  const [imagePreview, setImagePreview] = useState<ImagePreview | null>(null);
+  const closeImage = useCallback(() => {
+    setImageRequest(null);
+    setImagePreview(null);
+  }, []);
+  const startImage = (kind: ImageRequest['kind']) => {
+    if (!session || !selected) {
+      notify(message('imageSelectTarget'), true);
+      return;
+    }
+    setMode('select');
+    setTab('edit');
+    setDragOver(false);
+    setImagePreview(null);
+    setImageRequest({ base: session, targetId: selected.id, kind });
+  };
   const noteInput = useRef<HTMLTextAreaElement>(null);
   const savedSignature = useRef('');
   const autosaveGeneration = useRef(0);
@@ -146,11 +162,23 @@ export default function App() {
       : handoffMessage(session, locale)
     : '';
   const pendingInput = useRef(false);
-  pendingInput.current = Boolean(noteText || Object.keys(textEdits).length);
+  pendingInput.current = Boolean(noteText || Object.keys(textEdits).length || imageRequest);
   const notify = useCallback(
     (text: DisplayMessage, error = false) => setToast({ text, error }),
     [],
   );
+  useEffect(() => {
+    if (
+      imageRequest &&
+      (session !== imageRequest.base ||
+        selectedId !== imageRequest.targetId ||
+        mode !== 'select' ||
+        tab !== 'edit')
+    ) {
+      closeImage();
+      notify(message('theDocumentChangedSelectTheImageAgain'), true);
+    }
+  }, [session, selectedId, mode, tab, imageRequest, closeImage, notify]);
   const change = useCallback(
     (transform: (current: DocumentSession) => DocumentSession) => {
       const current = sessionRef.current;
@@ -609,6 +637,7 @@ export default function App() {
       inert={opening}
       onDragOver={(event) => {
         event.preventDefault();
+        if (imageRequest) return;
         if (event.dataTransfer.types.includes('Files')) setDragOver(true);
       }}
       onDragLeave={(event) => {
@@ -631,31 +660,6 @@ export default function App() {
         onChange={(event) => {
           if (event.target.files?.[0]) void openFile(event.target.files[0]);
           event.target.value = '';
-        }}
-      />
-      <input
-        ref={imageInput}
-        data-testid="image-file"
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        hidden
-        onChange={async (event) => {
-          const file = event.target.files?.[0];
-          event.target.value = '';
-          const id = selectedId;
-          const captured = sessionRef.current;
-          if (!file || !id) return;
-          try {
-            const data = await readImageFile(file);
-            if (sessionRef.current !== captured)
-              throw new MessageError(message('theDocumentChangedSelectTheImageAgain'));
-            change((current) => replaceImage(current, id, data));
-          } catch (error) {
-            notify(
-              error instanceof Error ? describeError(error) : message('couldNotReplaceTheImage'),
-              true,
-            );
-          }
         }}
       />
       <header className="app-header">
@@ -686,6 +690,14 @@ export default function App() {
         >
           <FolderOpen size={16} />
           {reading ? t('loading') : token ? t('openAnotherDocument50') : t('openHtml')}
+        </button>
+        <button
+          className="button"
+          disabled={!session || mode === 'interact'}
+          onClick={() => startImage('insert')}
+        >
+          <ImagePlus size={16} />
+          {t('imageInsert')}
         </button>
         <span className="toolbar-divider" />
         <div className="mode-switch" aria-label={t('editingMode')}>
@@ -973,11 +985,18 @@ export default function App() {
             )}
             <Preview
               key={documentEpoch}
-              session={session}
-              selectedId={selectedId}
+              session={imagePreview?.session ?? session}
+              selectedId={imagePreview?.id ?? selectedId}
+              insertion={imageRequest ? imagePreview?.position : undefined}
               mode={mode}
               width={width}
-              onSelect={select}
+              onSelect={(id) => {
+                if (imageRequest) {
+                  if (!elementMap.has(id)) return;
+                  closeImage();
+                }
+                select(id);
+              }}
               onNoteTarget={selectNoteTarget}
               onMarker={marker}
               onHistory={(direction) =>
@@ -1012,7 +1031,26 @@ export default function App() {
               </button>
             </div>
             <div className="sidebar-scroll">
-              {tab === 'edit' ? (
+              {imageRequest ? (
+                <ImagePanel
+                  key={imageRequest.targetId + imageRequest.kind}
+                  request={imageRequest}
+                  onPreview={setImagePreview}
+                  onCancel={closeImage}
+                  onApply={(next, id) => {
+                    if (sessionRef.current !== imageRequest.base) {
+                      closeImage();
+                      notify(message('theDocumentChangedSelectTheImageAgain'), true);
+                      return;
+                    }
+                    if (change(() => next)) {
+                      closeImage();
+                      setSelectedId(id);
+                      setJump({ id, nonce: Date.now() });
+                    }
+                  }}
+                />
+              ) : tab === 'edit' ? (
                 <>
                   {selected ? (
                     <>
@@ -1117,10 +1155,16 @@ export default function App() {
                           <div className="section-caption">{t('image')}</div>
                           <button
                             className="button full-width"
-                            onClick={() => imageInput.current?.click()}
+                            onClick={() => startImage('replace')}
                           >
                             <ImagePlus size={15} />
                             {t('replaceImage')}
+                          </button>
+                          <button
+                            className="button full-width"
+                            onClick={() => startImage('properties')}
+                          >
+                            {t('imageProperties')}
                           </button>
                           <p className="field-hint">
                             {t('pngJpegWebpGifUpTo10mb')}

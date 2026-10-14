@@ -252,3 +252,81 @@ The user authorized publication after the successful Claude follow-up. The first
 - Tarball SHA-256: `8257155910d31a903f4630c8c3e4718a0873c8c4b128738ee83dedf12c79beba`.
 
 Local publication evidence is in `.cache/release-1.3.0-published/`: `published-verification.json`, `registry-metadata.json`, `attestations.json`, the registry-matched release tarball, and `SHA256SUMS`. This receipt is a post-release documentation update; the published package and tag remain tied to the release commit above.
+
+## 1.4.0 platform candidate verification (2026-10-14 KST)
+
+**Implementation and automated platform checks passed. Native dialog completion, actual Safari use, and native AI reflection are still pending user interaction/authentication. This is an unpublished candidate, not a claim of complete Linux/macOS support.**
+
+### Environment and baseline
+
+| Environment                           | Runtime / browser                                               | Result                                                                                       |
+| ------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Windows                               | Node 22.17.0; Chrome 154.0.8037.95; Edge 155.0.4283.45          | Build, 64 unit tests, 82 browser tests, package lifecycle passed                             |
+| Ubuntu 24.04.3, WSL2/WSLg, x64        | Isolated Node 22.23.3; Linux Chrome 155.0.8059.79; zenity 4.0.1 | Build, 64 unit tests, 41 Chrome browser tests, package lifecycle passed                      |
+| Physical MacBook, macOS 15.6.1, arm64 | Isolated Node 22.23.3; Chrome 155.0.8059.40                     | Build, 64 unit tests, 41 Chrome browser tests, package lifecycle passed                      |
+| Same MacBook                          | Safari 18.6                                                     | Pending: native WebDriver requested Allow remote automation; no Safari workflow pass claimed |
+
+The published 1.3.0 package was installed in isolated homes on both Ubuntu and Mac. Both installed Claude/Codex skills, opened and read a Unicode-path HTML document, and stopped/uninstalled successfully. Both returned `PICKER_UNSUPPORTED` from authenticated native document selection, reproducing the Windows-only limitation. These were baseline checks, not complete 1.3.0 platform certifications.
+
+Node archives came from the official Node distribution and their SHA-256 values were checked against `SHASUMS256.txt`. Existing global Node, skills, authentication, and signal_flare files/processes were left intact. Ubuntu received Chrome, zenity, and xdg-utils with their system dependencies. Test runtimes, profiles and documents are under each user's `htmledit-platform-1.4.0` directory. WSL-native Chrome tests are distinct from Windows-browser access to a WSL server; no general Linux desktop certification is inferred.
+
+### Implementation and regression evidence
+
+- Added macOS osascript and Ubuntu zenity file pickers. Titles/filters travel as arguments or environment variables, never interpolated source. Tests distinguish cancellation, missing tools, missing desktop, native errors and timeouts, and preserve Unicode, quotes and path whitespace. Existing authenticated selection still accepts no browser-supplied filesystem path.
+- Shared browser launch handling covers Windows, macOS and Linux, nonzero exit status, missing commands and timeouts. Headless use retains `--no-browser` and returned loopback URLs. The standalone start command uses the same launcher.
+- Mac package smoke testing exposed a real reinstall bug: `/var/...` and `/private/var/...` compared unequal even though they named the same runtime. Installation now compares real paths before copying. A directory-alias reinstall case was added and passed on all three OSes, including Windows junctions.
+- Chrome tests on the physical Mac exercised Cmd-based undo/redo via `ControlOrMeta`; IME composition, Unicode, image replacement, metadata, save conflicts, preferences and all five locale workflows remain covered by the existing browser suite. Automated composition events are not a claim of manually verified OS IME input.
+- The first Windows run had 81/82 passing with an Edge scenario timing out while WSL tests were also active. That scenario passed 3/3 in isolation, and the full final-code run passed 82/82 with two workers. No product assertion or timeout was relaxed.
+- Both updated skills passed the skill format validator. The test package contained 41 files and passed install, persistent runtime, open/reuse, checkout/apply/backup, normal and alias reinstall, modified-skill protection, stop and uninstall.
+- Byte-preserving copies of actual 1.2.2 and 1.3.0 review fixtures each passed open → checkout → unchanged candidate apply → status on both Ubuntu and Mac. Files and backups matched byte-for-byte. These compatibility checks were not AI interpretation tests.
+- CI configuration now includes Windows, Ubuntu 24.04 and macOS 15, preserving the Windows check name. Chrome runs on all targets and Edge additionally on Windows. The new GitHub matrix has not been pushed/run yet; local native-OS results are recorded separately.
+
+### Real-use gates and artifact identity
+
+Installed the same candidate tarball in isolated homes on both machines and started visible native Chrome sessions. The Mac native HTML dialog was observed through Chrome Remote Desktop. Cancel/select completion is awaiting user interaction; Windows Computer Use failed initialization, and Mac accessibility automation was not enabled. The live harnesses reached their five-minute response timeout before user interaction and must be reopened for the follow-up. This is not a native picker selection/cancellation pass. No accessibility setting was changed. Safari remote automation is also awaiting the user's setting choice or manual testing. Neither WebKit nor Chrome results count as Safari evidence.
+
+Claude Code 2.1.296 is installed in each test directory with separate `CLAUDE_CONFIG_DIR` profiles. At the last check neither test profile was authenticated. Login was requested from the user; no native Claude/Codex interpretation or AI reflection pass is claimed yet. Authentication keys/codes must not be included in evidence.
+
+The tested application source started from `4a6e788d95eee8f0a048544751cc7e9e7678a539` plus the uncommitted 1.4.0 changes. The transferred source archive SHA-256 was `136f45f3f306989244cd81bbe0313f7b2156f3c910e9601d03287c451caac474`. The installed live-test tarball SHA-256 was `1aab9240f4a198166f372dbeab5168039e323ef8b06609210f8ec729a3b567f3`. Later documentation-only edits are not part of that tarball; any final candidate must be repacked and its hash recorded after the remaining gates pass.
+
+Local evidence is under `.cache/platform-1.4.0/`, including `linux/` and `mac/` build/unit/browser/package logs, baseline and compatibility JSON, the source archive and candidate tarball. Remote live-stage and connection files stay inside the isolated test directories; connection URLs are credentials and are not published. Existing historical results above remain unchanged. No tag push or npm publication was performed for 1.4.0.
+
+## Image insertion candidate — 2026-10-14
+
+This is an additive feature on the uncommitted 1.4.0 platform candidate, based on commit `4a6e788d95eee8f0a048544751cc7e9e7678a539`. No release version was changed, no tag was pushed, and nothing was published. The earlier platform verification and its outstanding manual gates above remain separate.
+
+### Behavior and compatibility
+
+- Added element-relative image insertion (before, after, or last child), with a preview-only document copy and a position marker. Apply commits one undo step and selects the new image. Cancellation, rejected input and stale asynchronous reads do not insert content into the working document.
+- Local file selection, panel-scoped drag/drop and image paste, and credential-free HTTP/HTTPS image downloads share MIME/signature/decode validation. PNG/JPEG/WebP/GIF are embedded without recompression. Limits remain 10MB per image and 25MB per exported HTML, including base64 expansion. Downloads stream with a byte limit and a 15-second timeout; there is no server proxy or automatic external-link fallback.
+- Added original/percentage width, alignment and alternative text controls. Replacement shares the input panel and preserves existing layout styles, while still clearing responsive sources. Unsupported insertion parents are disabled instead of silently relocating images. Review metadata remains version 1 with the existing element/note IDs and checkout/apply contract.
+- Image drafts participate in the existing pending-input guard for AI-request copying, connected document switching and external-result refresh. They do not change the saved file or undo history until applied. Five UI catalogs and user guides cover the feature. Translations were implementation-reviewed, not native-speaker reviewed.
+
+### Automated evidence
+
+| Environment                          | Runtime and browser                                    | Result                                                                                   |
+| ------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Windows x64                          | Node 22.17.0; Chrome 154.0.8037.95; Edge 155.0.4283.45 | Build, 78 unit tests, 96 browser tests, package lifecycle and format check passed        |
+| Ubuntu 24.04.3 WSL2 x64              | Isolated Node 22.23.3; Linux Chrome 155.0.8059.79      | Build, 78 unit tests, 48 browser tests, package lifecycle passed                         |
+| Physical MacBook, macOS 15.6.1 arm64 | Isolated Node 22.23.3; Chrome 155.0.8059.40            | Build, 78 unit tests, 48 browser tests, package lifecycle passed                         |
+| Same MacBook                         | Safari 18.6                                            | Not verified: WebDriver rejected the session because Allow remote automation is disabled |
+
+The image browser cases cover discardable preview and export isolation, insertion/undo/redo, note/export/reopen, URL bytes and failures, paste/drop routing, invalid positions, stale downloads after target change, all five locales during input, all four image formats, subsequent presentation edits and style-preserving replacement. A real Clipboard API write followed by Ctrl/Cmd+V passed in Windows Chrome/Edge and native Linux/Mac Chrome; synthetic paste/drop event coverage is recorded separately from that API/keyboard test. Browser runs used headless vendor Chrome/Edge binaries; they do not establish manual WSLg or native dialog behavior. File-input automation is not a claim of manually operating the operating-system picker. No Safari/WebKit equivalence is claimed.
+
+Unit cases cover insertion structure, round trips, note orphaning/restoration, clean export, invalid types/positions/widths, image byte signatures, unsupported URLs, MIME mismatch, file/download size limits with and without Content-Length, network/HTTP failures and timeouts. The deliberate 25MB parse test exceeded the default five-second test deadline under concurrent platform load; it has a case-specific 15-second budget with the same size and assertions. The download timeout itself remains 15 seconds.
+
+Early browser runs exposed missing explicit select labels and outdated test selectors; those were corrected. A tiny historical PNG fixture rendered in an img element but was rejected by Chromium's Clipboard API decoder; the real clipboard test now uses a valid canvas-encoded PNG. A concurrent Windows/WSL run reused the same forwarded development port and lost its server after WSL finished; the final Windows suite ran independently with CI server ownership and passed all 96 cases. Initial remote transfer also omitted index.html; the archive was corrected before the successful native runs. None of these incomplete runs is counted as a pass.
+
+### Actual Codex interpretation and apply
+
+The current Codex agent used the candidate's bundled htmledit skill runner on a dedicated test document. Browser automation inserted a generated PNG, added a Korean request for 60% width, center alignment and 24px top spacing while preserving image data/alt text, then saved and copied the AI request. The agent read status, checked out the candidate, read the target and note, edited only the returned candidate and marked only that fulfilled note complete, then ran apply and status. This was an actual Codex interpretation step, not a scripted DocumentStore simulation; it was performed from Windows, not by a separately authenticated native Linux/Mac AI CLI.
+
+The connected Chrome page refreshed without reopening the file. The result was inspected visually and asserted for the new width/spacing, byte-identical image source, unchanged alternative text and original HTML, one completed note, and a clean export containing the image but no editor IDs or review block. The apply backup matched the pre-apply review byte-for-byte: SHA-256 `f5fcdc85bbef3eb1945efd77f62f643eafcd6f9e3be732ee5ffcaf2c35a4295c`. No user document was modified.
+
+### Evidence and remaining checks
+
+Local evidence is under `.cache/images-verification/` (Windows browser/package logs, source hashes and `live/` before/after screenshots, candidate/apply receipts and clean export). Native logs are in each dedicated `htmledit-platform-1.4.0/images-20261014-a266/evidence` directory. Existing platform test directories, global skills, authentication and signal_flare processes were preserved. Connection files contain edit tokens and remain ignored/private.
+
+The application source digest is `d6860f769b6cfcc6d38a93babaed5bcab5e43ea5343640d08e44e3dc1b4a49cf`: SHA-256 over sorted POSIX src file paths, each followed by NUL and its raw bytes; the per-file manifest is retained locally. The native browser runs used this same application source. The final unit-only timeout adjustment was copied to both native environments and their unit suites rerun successfully.
+
+Pending manual gates: actual Safari behavior after the user enables remote automation or performs manual checks, and manual native image file-picker operation. Previous 1.4.0 platform gates (native document-picker interaction and separately authenticated native AI sessions) remain unfulfilled unless separately recorded. These pending items prevent treating this record as complete cross-platform release certification.

@@ -2,7 +2,7 @@
 
 [English](README.md) · [한국어](docs/i18n/README.ko.md) · [Español](docs/i18n/README.es.md) · [日本語](docs/i18n/README.ja.md) · [Português (Brasil)](docs/i18n/README.pt-BR.md)
 
-Edit AI-generated HTML visually, leave notes on specific elements, and ask Claude Code or Codex to apply them. HTMLEdit runs locally, without an account or AI API key. Windows Chrome and Edge are the supported desktop environment.
+Edit AI-generated HTML visually, leave notes on specific elements, and ask Claude Code or Codex to apply them. HTMLEdit runs locally, without an account or AI API key. The 1.4.0 candidate targets Windows Chrome/Edge, Ubuntu 24.04 with WSL2/WSLg Chrome, and macOS 15.6.1 Apple Silicon with Chrome/Safari. See the verification record for completed and pending checks.
 
 ## Install and open
 
@@ -45,7 +45,7 @@ Notes can be edited, deleted, completed, reopened or reassigned. Missing or dupl
 
 ## Documents, interaction and recovery
 
-**Open another document** asks how to handle unsaved work, then opens the Windows file picker. Cancellation or a save failure keeps the current document. Existing review files reopen without being overwritten. Previous document servers and backups remain available. The native picker's standard buttons use the Windows display language.
+**Open another document** asks how to handle unsaved work, then opens the system file picker. Cancellation or a save failure keeps the current document. Existing review files reopen without being overwritten. Previous document servers and backups remain available. The native picker's standard buttons use the operating-system display language.
 
 **Interact** enables menus and tabs in trusted documents. Navigate, then choose **Edit directly** or **Add notes** to keep that screen while editing. **Back to first screen** resets navigation without discarding edits or notes. Classes, styles and visibility of original elements are supported; script-created elements, form values and canvas editing are not. Navigation and scroll state are session-only, while original scripts remain in exports.
 
@@ -67,7 +67,7 @@ node "<skill-directory>/scripts/run.mjs" stop --file "./document.review.html"
 node "<skill-directory>/scripts/run.mjs" uninstall --agent all
 ```
 
-Stop active servers first. Uninstall removes managed skills; it preserves documents, backups, settings, runtimes and running servers. A separate cloud AI environment cannot directly access files on your PC. macOS/Linux file pickers and end-to-end browser use are not officially supported in this release.
+Stop active servers first. Uninstall removes managed skills; it preserves documents, backups, settings, runtimes and running servers. A separate cloud AI environment cannot directly access files on your PC. Support claims are limited to the environments actually verified; other Linux distributions, Intel Macs and other macOS versions are unverified.
 
 ## Supported files and local processing
 
@@ -89,6 +89,24 @@ npm run test:e2e
 npm run test:package
 ```
 
-The standalone editor uses `http://127.0.0.1:5173`; `start.cmd` also installs, builds and opens it on Windows. Close its terminal or press Ctrl+C to stop it. This mode downloads files rather than connecting to a working path. Chrome and Edge must be installed for browser tests.
+The standalone editor uses `http://127.0.0.1:5173`; `start.cmd` also installs, builds and opens it on Windows. Close its terminal or press Ctrl+C to stop it. This mode downloads files rather than connecting to a working path. Browser tests require Chrome on all targets and Edge additionally on Windows. Actual Safari verification is recorded separately.
 
 Translated examples are under `public/examples/<language>/` in source and `dist/examples/<language>/` in the package. [`docs/i18n/`](docs/i18n/) contains the translated guides, review format and terminology. See [review format v1](docs/REVIEW_FORMAT.md) and [verification history](docs/SKILLS_VERIFICATION.md). MIT licensed.
+
+## Platform setup
+
+Ubuntu desktop and WSLg require Chrome, zenity and xdg-utils. Install the latter with `sudo apt-get install zenity xdg-utils`. WSL needs a working WSLg session and a Linux installation of Node and Chrome; Windows browser access is only a separate interoperability check. macOS uses its built-in file picker. Use Cmd instead of Ctrl for editing shortcuts on Mac.
+
+For SSH/headless use, run `open "./document.html" --no-browser --json`. The returned URL belongs to the server computer. Use a loopback SSH tunnel to the returned port to view it remotely; never expose the server publicly. Native file dialogs still appear on the server desktop. Without a desktop or a picker, open another file through the CLI. Treat the URL fragment as a credential and keep it out of shared logs.
+
+[Verification](docs/SKILLS_VERIFICATION.md)
+
+## Insert images
+
+Select a document element, then click **Insert image**. Choose **Before**, **After**, or **At the end inside**; the position marker and document preview show the result before it is applied. For table rows or list containers, select a cell, list item, or a suitable parent instead.
+
+Choose one local PNG, JPEG, WebP or GIF, drop it onto the image panel, paste an image in the panel with Ctrl+V / Cmd+V, or load a direct HTTP/HTTPS image URL. Each image is limited to 10MB and must decode successfully. URL downloads omit credentials, have a 15-second timeout, and follow browser cross-origin rules. If the site blocks access, use a downloaded file or paste the image. SVG, HTML clipboard fragments and multiple images at once are not supported.
+
+Use original size (constrained to the available width) or 1–100% of the container width, choose left/center/right alignment and enter alternative text. **Apply image** embeds the bytes in the HTML and creates one undo step. Until then, previews do not change saved HTML or history. All embedded images together must fit within the 25MB HTML limit. No compression or format conversion is performed.
+
+The inserted image stays selected. Use **Image size and alignment** for later adjustments, or add a note for AI layout changes. **Replace image** uses the same file, URL and paste inputs while preserving existing layout styles. Finish or cancel the image panel before copying the AI request. Save and copy, then use the usual checkout/apply workflow; review format v1 is unchanged.

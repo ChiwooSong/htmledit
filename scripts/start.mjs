@@ -2,7 +2,6 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(project, 'dist');
@@ -53,16 +52,13 @@ server.on('error', (error) => {
   );
   process.exit(1);
 });
-server.listen(port, '127.0.0.1', () => {
+server.listen(port, '127.0.0.1', async () => {
   const url = `http://127.0.0.1:${port}`;
   console.log(
     `HTMLEdit 실행 중: ${url}\n종료하려면 Ctrl+C를 누르세요. 문서 파일은 서버로 전송되지 않습니다.`,
   );
-  if (process.platform === 'win32' && !process.env.HTMLEDIT_NO_BROWSER) {
-    spawn('rundll32.exe', ['url.dll,FileProtocolHandler', url], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-    }).unref();
+  if (!process.env.HTMLEDIT_NO_BROWSER) {
+    const { openBrowser } = await import('../runtime/platform.mjs');
+    if (!(await openBrowser(url))) console.error(`Open the editor manually: ${url}`);
   }
 });

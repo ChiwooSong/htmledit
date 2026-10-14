@@ -13,7 +13,17 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { readFile, writeFile, mkdir, cp, readdir, rm, open, rename } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  cp,
+  readdir,
+  rm,
+  open,
+  rename,
+  realpath,
+} from 'node:fs/promises';
 import {
   canonicalFile,
   prepareFile,
@@ -25,6 +35,7 @@ import {
 } from './store';
 import { startServer } from './server';
 import { pickHtmlFile } from './picker';
+import { openBrowser } from './platform';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const userHome = process.env.HTMLEDIT_USER_HOME || homedir();
@@ -169,24 +180,6 @@ async function ensure(file: string) {
   }
   throw new LocalError('START_FAILED', message('serverLog', { file: `${registry(file)}.log` }));
 }
-function browser(url: string) {
-  let child;
-  if (process.platform === 'win32')
-    child = spawn('rundll32.exe', ['url.dll,FileProtocolHandler', url], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-    });
-  else
-    child = spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], {
-      detached: true,
-      stdio: 'ignore',
-    });
-  child.on('error', () =>
-    console.error(translate(cliLocale, 'couldNotOpenTheBrowserAutomaticallyOpen')),
-  );
-  child.unref();
-}
 async function hashes(directory: string, prefix = ''): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   for (const entry of await readdir(join(directory, prefix), { withFileTypes: true })) {
@@ -241,6 +234,7 @@ async function install(uninstall = false) {
   }
   const runtime = join(home, 'versions', manifest.version);
   await mkdir(runtime, { recursive: true });
+  const sameRuntime = (await realpath(root)) === (await realpath(runtime));
   for (const name of [
     'dist',
     'runtime',
@@ -251,8 +245,7 @@ async function install(uninstall = false) {
     'package.json',
     'LICENSE',
   ]) {
-    if (resolve(root) !== resolve(runtime))
-      await cp(join(root, name), join(runtime, name), { recursive: true });
+    if (!sameRuntime) await cp(join(root, name), join(runtime, name), { recursive: true });
   }
   for (const target of destinations) {
     const staging = `${target.path}.install-${process.pid}`;
@@ -315,7 +308,8 @@ async function main() {
     const file = await prepareFile(args[1]);
     const connection = await ensure(file);
     const url = `${connection.origin}/${languageIndex >= 0 ? '?lang=' + encodeURIComponent(cliLocale) : ''}#htmledit=${connection.token}`;
-    if (!args.includes('--no-browser')) browser(url);
+    if (!args.includes('--no-browser') && !(await openBrowser(url)))
+      console.error(translate(cliLocale, 'couldNotOpenTheBrowserAutomaticallyOpen'));
     return output({ file, url, version: connection.version });
   }
   if (['status', 'checkout', 'apply', 'stop'].includes(command)) {

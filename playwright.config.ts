@@ -13,7 +13,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'chrome', use: { browserName: 'chromium', channel: 'chrome' } },
-    { name: 'edge', use: { browserName: 'chromium', channel: 'msedge' } },
+    ...(process.platform === 'win32'
+      ? [{ name: 'edge', use: { browserName: 'chromium' as const, channel: 'msedge' } }]
+      : []),
   ],
   webServer: {
     command: 'npm run dev',

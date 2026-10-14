@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [한국어](README.ko.md) · [Español](README.es.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt-BR.md)
 
-Edite visualmente o HTML criado por IA, deixe notas em elementos específicos e peça ao Claude Code ou Codex para aplicá-las. O HTMLEdit funciona localmente, sem conta ou chave de API de IA. O ambiente de desktop suportado é Windows com Chrome ou Edge.
+Edite visualmente o HTML criado por IA, deixe notas em elementos específicos e peça ao Claude Code ou Codex para aplicá-las. O HTMLEdit funciona localmente, sem conta ou chave de API de IA. A versão candidata 1.4.0 tem como alvos Windows com Chrome/Edge, Ubuntu 24.04 com WSL2/WSLg e Chrome e macOS 15.6.1 Apple Silicon com Chrome/Safari. Consulte as verificações concluídas e pendentes no registro de validação.
 
 ## Instalar e abrir
 
@@ -45,7 +45,7 @@ A cópia é interrompida quando há entradas não aplicadas, falhas de salvament
 
 ## Trocar documentos, interagir e recuperar
 
-**Abrir outro documento** pergunta se deseja salvar e abre a janela de seleção do Windows. Cancelar ou falhar ao salvar mantém o documento atual. Arquivos de revisão existentes não são sobrescritos; servidores e backups anteriores são mantidos. Os botões padrão da janela seguem o idioma do Windows.
+**Abrir outro documento** pergunta se deseja salvar e abre a janela de seleção do sistema. Cancelar ou falhar ao salvar mantém o documento atual. Arquivos de revisão existentes não são sobrescritos; servidores e backups anteriores são mantidos. Os botões padrão da janela seguem o idioma do sistema operacional.
 
 Use **Interagir** em documentos confiáveis para navegar por menus e abas. Na tela desejada, escolha **Editar diretamente** ou **Adicionar notas**. **Voltar à primeira tela** reinicia a navegação sem descartar edições ou notas. São suportadas mudanças de classe, estilo e visibilidade dos elementos originais; a edição de elementos criados por scripts, valores de formulários e canvas não é suportada. Navegação e rolagem são estados da sessão. Os scripts originais permanecem na exportação.
 
@@ -67,7 +67,7 @@ node "<skill-directory>/scripts/run.mjs" stop --file "./document.review.html"
 node "<skill-directory>/scripts/run.mjs" uninstall --agent all
 ```
 
-Encerre primeiro os servidores ativos. A desinstalação remove os skills gerenciados, mas preserva documentos, backups, preferências, ambientes de execução e servidores ativos. Uma IA em uma nuvem independente não acessa diretamente os arquivos do seu PC. Seletores de arquivos e uso completo no navegador em macOS/Linux não têm suporte oficial nesta versão.
+Encerre primeiro os servidores ativos. A desinstalação remove os skills gerenciados, mas preserva documentos, backups, preferências, ambientes de execução e servidores ativos. Uma IA em uma nuvem independente não acessa diretamente os arquivos do seu PC. O suporte se limita aos ambientes verificados; outras distribuições Linux, Macs Intel e outras versões do macOS não foram verificados.
 
 ## Arquivos suportados e dados
 
@@ -88,6 +88,24 @@ npm run test:e2e
 npm run test:package
 ```
 
-O modo de download usa `http://127.0.0.1:5173`. No Windows, `start.cmd` também instala, compila e abre o editor; feche o terminal ou use Ctrl+C para encerrá-lo. Use `npm run dev` para desenvolver. Os testes exigem Chrome e Edge instalados.
+O modo de download usa `http://127.0.0.1:5173`. No Windows, `start.cmd` também instala, compila e abre o editor; feche o terminal ou use Ctrl+C para encerrá-lo. Use `npm run dev` para desenvolver. Os testes exigem Chrome em todos os ambientes e também Edge no Windows. A verificação no Safari real é registrada separadamente.
 
 Exemplos: `public/examples/<language>/` no código e `dist/examples/<language>/` no pacote. [Formato das notas](REVIEW_FORMAT.pt-BR.md), [terminologia](GLOSSARY.md), [histórico de verificação](../SKILLS_VERIFICATION.md). Licença MIT.
+
+## Preparação por sistema
+
+Ubuntu e WSLg exigem Chrome, zenity e xdg-utils. Instale as ferramentas com `sudo apt-get install zenity xdg-utils`. O WSL precisa de uma sessão WSLg e de Node e Chrome para Linux. O acesso pelo navegador Windows é verificado separadamente. O macOS usa o seletor integrado; use Cmd em vez de Ctrl nos atalhos de edição.
+
+Por SSH ou sem interface gráfica, execute `open "./document.html" --no-browser --json`. A URL pertence ao computador servidor. Use um túnel SSH de loopback para a porta indicada; não exponha o servidor publicamente. O seletor aparece no desktop do servidor. Sem desktop ou seletor, abra outro arquivo pela CLI. Não publique o token da URL em registros compartilhados.
+
+[Verification / 검증 기록](../SKILLS_VERIFICATION.md)
+
+## Inserir imagens
+
+Selecione um elemento e clique em **Inserir imagem**. Escolha **Antes**, **Depois** ou **No final, dentro**. O marcador e a prévia do documento mostram o resultado antes da aplicação. Em tabelas e listas, selecione uma célula, item de lista ou área de conteúdo adequada.
+
+Escolha um arquivo local PNG, JPEG, WebP ou GIF, arraste-o para o painel, cole uma imagem com Ctrl+V / Cmd+V na área de colagem ou carregue uma URL direta HTTP/HTTPS. É permitida uma imagem por vez, de até 10MB, que possa ser decodificada. O download por URL não envia credenciais, tem limite de 15 segundos e respeita as restrições de acesso do navegador. Se o site bloquear o acesso, use um arquivo baixado ou cole a imagem. SVG, trechos HTML da área de transferência e várias imagens de uma vez não são aceitos.
+
+Defina o tamanho original (limitado à largura disponível) ou 1–100% da largura da área, alinhamento à esquerda/centro/direita e texto alternativo. **Aplicar imagem** inclui os dados no HTML e cria uma etapa de desfazer. A prévia não altera o arquivo salvo nem o histórico. O HTML completo, incluindo as imagens, deve ter até 25MB. Não há compressão nem conversão automática de formato.
+
+A imagem inserida permanece selecionada. Use **Tamanho e alinhamento da imagem** para ajustes posteriores ou adicione uma nota pedindo alterações de layout à IA. **Substituir imagem** usa as mesmas entradas e preserva os estilos de layout existentes. Aplique ou cancele o painel antes de salvar e copiar o pedido para a IA. O fluxo checkout/apply e o formato review v1 permanecem iguais.

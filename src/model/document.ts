@@ -7,6 +7,7 @@ import {
   type DisplayMessage,
 } from '../i18n';
 import { parse, parseFragment, serialize, type DefaultTreeAdapterTypes as T } from 'parse5';
+import { assertHtmlSize } from '../io/files';
 
 export const TARGET_ATTR = 'data-htmledit-id';
 export const REVIEW_ID = 'htmledit-review';
@@ -385,6 +386,171 @@ export function replaceImage(session: DocumentSession, id: string, dataUrl: stri
         .forEach(remove);
     }
   });
+}
+
+export type ImagePosition = 'before' | 'after' | 'inside';
+export interface ImagePresentation {
+  width: 'original' | number;
+  align: 'left' | 'center' | 'right';
+  alt: string;
+}
+// Conservative flow-content containers: never let the HTML parser relocate the image.
+const imageContainers = new Set([
+  'body',
+  'div',
+  'main',
+  'section',
+  'article',
+  'aside',
+  'nav',
+  'header',
+  'footer',
+  'figure',
+  'figcaption',
+  'blockquote',
+  'li',
+  'dd',
+  'dt',
+  'td',
+  'th',
+  'form',
+  'fieldset',
+  'details',
+  'dialog',
+  'p',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+]);
+function insertionParent(target: T.Element, position: ImagePosition) {
+  const parent = position === 'inside' ? target : target.parentNode;
+  if (
+    !parent ||
+    !isElement(parent) ||
+    parent.namespaceURI !== 'http://www.w3.org/1999/xhtml' ||
+    !imageContainers.has(parent.tagName)
+  )
+    return;
+  // Template content and inert/non-rendered ancestry cannot be a visual insertion target.
+  let ancestor: T.Node | null = parent;
+  let inBody = false;
+  while (ancestor) {
+    if (isElement(ancestor) && ['template', 'head', 'svg', 'math'].includes(ancestor.tagName))
+      return;
+    if (isElement(ancestor) && ancestor.tagName === 'body') inBody = true;
+    ancestor = 'parentNode' in ancestor ? ancestor.parentNode : null;
+  }
+  return inBody ? parent : undefined;
+}
+export function imagePositions(session: DocumentSession, id: string): ImagePosition[] {
+  const target = find(parse(session.html), id);
+  return target
+    ? (['before', 'after', 'inside'] as const).filter((p) => insertionParent(target, p))
+    : [];
+}
+function imageStyle(node: T.Element, options: ImagePresentation) {
+  if (
+    (options.width !== 'original' &&
+      (!Number.isFinite(options.width) || options.width < 1 || options.width > 100)) ||
+    !['left', 'center', 'right'].includes(options.align)
+  )
+    throw new MessageError(message('imageInvalidSize'));
+  const properties = new Set([
+    'width',
+    'height',
+    'max-width',
+    'min-width',
+    'display',
+    'margin',
+    'margin-left',
+    'margin-right',
+    'margin-inline',
+    'margin-inline-start',
+    'margin-inline-end',
+    'align-self',
+    'justify-self',
+  ]);
+  const previous = (attr(node, 'style') ?? '')
+    .split(';')
+    .filter((part) => !properties.has(part.split(':')[0].trim().toLowerCase()))
+    .filter(Boolean);
+  const left = options.align === 'left' ? '0' : 'auto';
+  const right = options.align === 'right' ? '0' : 'auto';
+  setAttr(
+    node,
+    'style',
+    [
+      ...previous,
+      `width: ${options.width === 'original' ? 'auto' : `${options.width}%`} !important`,
+      'height: auto !important',
+      'max-width: 100% !important',
+      'min-width: 0 !important',
+      'display: block !important',
+      `margin-left: ${left} !important`,
+      `margin-right: ${right} !important`,
+      `align-self: ${options.align === 'center' ? 'center' : options.align === 'left' ? 'flex-start' : 'flex-end'} !important`,
+      `justify-self: ${options.align === 'center' ? 'center' : options.align === 'left' ? 'start' : 'end'} !important`,
+    ].join('; '),
+  );
+  node.attrs = node.attrs.filter((a) => !['width', 'height'].includes(a.name));
+  setAttr(node, 'alt', options.alt);
+}
+export function imageDetails(session: DocumentSession, id: string) {
+  const node = find(parse(session.html), id);
+  if (!node || node.tagName !== 'img') throw new MessageError(message('selectAnImage'));
+  const style = attr(node, 'style') ?? '';
+  const width = style.match(/(?:^|;)\s*width:\s*([\d.]+)%/i);
+  const left = /margin-left:\s*auto/i.test(style);
+  const right = /margin-right:\s*auto/i.test(style);
+  return {
+    src: attr(node, 'src') ?? '',
+    width: width ? Number(width[1]) : 'original',
+    align: left ? (right ? 'center' : 'right') : 'left',
+    alt: attr(node, 'alt') ?? '',
+  } as ImagePresentation & { src: string };
+}
+export function updateImagePresentation(
+  session: DocumentSession,
+  id: string,
+  options: ImagePresentation,
+) {
+  return mutate(session, id, (node) => {
+    if (node.tagName !== 'img') throw new MessageError(message('selectAnImage'));
+    imageStyle(node, options);
+  });
+}
+export function insertImage(
+  session: DocumentSession,
+  targetId: string,
+  position: ImagePosition,
+  dataUrl: string,
+  options: ImagePresentation,
+  id = newId(),
+): { session: DocumentSession; id: string } {
+  if (!/^data:image\/(png|jpeg|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(dataUrl))
+    throw new MessageError(message('chooseAPngJpegWebpOrGif'));
+  const root = parse(session.html);
+  const target = find(root, targetId);
+  const parent = target && insertionParent(target, position);
+  if (!parent || !target || !['before', 'after', 'inside'].includes(position))
+    throw new MessageError(message('imageInvalidPosition'));
+  if (find(root, id) || !isId(id)) throw new MessageError(message('imageInvalidPosition'));
+  const node = parseFragment('<img>').childNodes[0] as T.Element;
+  setAttr(node, TARGET_ATTR, id);
+  setAttr(node, 'src', dataUrl);
+  imageStyle(node, options);
+  node.parentNode = parent;
+  const index =
+    position === 'inside'
+      ? parent.childNodes.length
+      : parent.childNodes.indexOf(target) + (position === 'after' ? 1 : 0);
+  parent.childNodes.splice(index, 0, node);
+  const next = { ...session, html: serialize(root) };
+  assertHtmlSize(exportDocument(next, 'review'));
+  return { session: next, id };
 }
 export function deleteElement(session: DocumentSession, id: string) {
   return mutate(session, id, (node) => {

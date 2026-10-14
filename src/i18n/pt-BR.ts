@@ -1,5 +1,11 @@
 import type { Catalog } from './types';
 export default {
+  pickerNeedsDesktop:
+    'A seleção de arquivos exige uma sessão de desktop ativa no computador do servidor. Sem interface gráfica, abra o arquivo pela CLI com --no-browser.',
+  pickerToolMissing:
+    'A ferramenta de seleção de arquivos {tool} não foi encontrada. No Ubuntu, instale zenity e xdg-utils e tente novamente. O documento não foi alterado.',
+  pickerPlatformUnsupported:
+    'A seleção de arquivos está disponível no Windows, macOS e Ubuntu com uma sessão de desktop.',
   connectingToTheWorkingFile: 'Conectando ao arquivo de trabalho…',
   draftReady: 'Rascunho pronto',
   htmlNotSavedYet: 'HTML ainda não salvo',
@@ -37,14 +43,14 @@ export default {
   couldNotOpenTheNewDocumentYour:
     'Não foi possível abrir o novo documento. Seu trabalho atual foi preservado.',
   applyOrCancelTheTextOrNote:
-    'Aplique ou cancele o texto ou a nota em edição antes de abrir outro documento.',
+    'Aplique ou cancele o texto, a nota ou a imagem em edição antes de abrir outro documento.',
   saveYourCurrentWork: 'Salvar seu trabalho atual?',
   thereAreUnsavedChangesChooseWhetherTo:
-    'Há alterações não salvas. Escolha se deseja salvar e selecione outro HTML na janela do Windows. Cancelar mantém este documento aberto.',
+    'Há alterações não salvas. Escolha se deseja salvar e selecione outro HTML na janela do sistema. Cancelar mantém este documento aberto.',
   saveAndChooseDocument: 'Salvar e escolher documento',
   chooseWithoutSaving: 'Escolher sem salvar',
   applyOrCancelTheTextOrNote34:
-    'Aplique ou cancele o texto ou a nota em edição antes de copiar o pedido para a IA.',
+    'Aplique ou cancele o texto, a nota ou a imagem em edição antes de copiar o pedido para a IA.',
   yourWorkChangedWhileSavingApplyThe:
     'Seu trabalho mudou durante o salvamento. Aplique as alterações e copie o pedido para a IA novamente.',
   workingFileSavedAndAiRequestCopied: 'Arquivo salvo e pedido copiado. Cole na conversa com a IA.',
@@ -71,9 +77,9 @@ export default {
   editDirectly: 'Editar diretamente',
   addNotes: 'Adicionar notas',
   undo: 'Desfazer',
-  undoCtrlZ: 'Desfazer Ctrl+Z',
+  undoCtrlZ: 'Desfazer Ctrl/Cmd+Z',
   redo: 'Refazer',
-  redoCtrlShiftZ: 'Refazer Ctrl+Shift+Z',
+  redoCtrlShiftZ: 'Refazer Ctrl/Cmd+Shift+Z',
   saveFinalHtml: 'Salvar HTML final',
   saving: 'Salvando…',
   saveWorkingFile: 'Salvar arquivo de trabalho',
@@ -197,7 +203,7 @@ export default {
   aSingleHtmlFileWithEmbeddedCss: 'Um único HTML com CSS e imagens incorporados funciona melhor.',
   makeSimpleEditsYourself: 'Faça as edições simples.',
   clickAnElementOrDoubleClickText:
-    'Clique em um elemento ou duas vezes no texto. Use Ctrl+Enter para aplicar e Esc para cancelar. Use Selecionar elemento pai para selecionar um cartão inteiro.',
+    'Clique em um elemento ou duas vezes no texto. Use Ctrl/Cmd+Enter para aplicar e Esc para cancelar. Use Selecionar elemento pai para selecionar um cartão inteiro.',
   leaveNotesForComplexChanges: 'Deixe notas para alterações complexas.',
   selectAnElementAndDescribeTheChange:
     'Selecione um elemento e descreva a alteração e a posição: antes, depois ou dentro.',
@@ -212,7 +218,7 @@ export default {
   gotIt: 'Entendi',
   connectingAnotherDocument: 'Conectando outro documento',
   selectAnHtmlDocumentInTheWindows:
-    'Selecione um HTML na janela do Windows ou cancele. Seu trabalho atual é mantido até concluir o salvamento e a conexão.',
+    'Selecione um HTML na janela do sistema ou cancele. Seu trabalho atual é mantido até concluir o salvamento e a conexão.',
   useMenusAndButtonsToNavigateThen:
     'Use os menus e botões para navegar e escolha Editar diretamente. Este modo executa scripts; use apenas documentos confiáveis.',
   youAreEditingTheCurrentScreenUse:
@@ -365,5 +371,38 @@ export default {
   localWorkspace: 'ESPAÇO DE TRABALHO LOCAL',
   fromAi: 'DA IA PARA SUAS MÃOS',
   quickGuide: 'HTML EDIT · GUIA RÁPIDO',
+  imageInsert: 'Inserir imagem',
+  imageSelectTarget: 'Selecione primeiro onde inserir a imagem.',
+  imagePosition: 'Posição de inserção',
+  imageInsideLast: 'No final, dentro',
+  imageInvalidPosition:
+    'Não é possível inserir aqui. Selecione uma área de conteúdo, célula, item de lista ou elemento pai.',
+  imageChooseFile: 'Escolher arquivo de imagem',
+  imageDropPaste: 'Arraste uma imagem aqui ou cole com Ctrl+V / Cmd+V.',
+  imageOneOnly: 'Adicione uma imagem por vez.',
+  imagePasteFile: 'Copie uma imagem e cole aqui. Texto e HTML não são inseridos como imagens.',
+  imageUrl: 'URL da imagem',
+  imageFetch: 'Carregar imagem',
+  imageInvalidUrl: 'Insira uma URL direta HTTP ou HTTPS sem credenciais.',
+  imageUrlFailed:
+    'Não foi possível obter a imagem. O site pode bloquear o download. Use um arquivo local ou cole a imagem.',
+  imageUrlTimeout:
+    'O download da imagem excedeu o tempo limite. Use um arquivo local ou cole a imagem.',
+  imageInvalidData: 'Não foi possível decodificar o arquivo no formato de imagem indicado.',
+  imageSizing: 'Tamanho da imagem',
+  imageOriginal: 'Tamanho original (ajustar à área)',
+  imagePercent: 'Porcentagem da largura da área',
+  imageWidth: 'Largura (%)',
+  imageInvalidSize: 'Insira uma largura de 1 a 100% e um alinhamento válido.',
+  imageAlignment: 'Alinhamento da imagem',
+  imageLeft: 'Esquerda',
+  imageCenter: 'Centro',
+  imageRight: 'Direita',
+  imageAlt: 'Texto alternativo',
+  imagePreview: 'Prévia da imagem · não aplicada',
+  imageProperties: 'Tamanho e alinhamento da imagem',
+  imageApply: 'Aplicar imagem',
+  imageEmbeddedHint:
+    'PNG, JPEG, WebP ou GIF · Até 10MB por imagem. Incluída no HTML; limite total: 25MB.',
   appTitle: 'HTMLEdit · Edite visualmente e compartilhe notas',
 } satisfies Catalog;

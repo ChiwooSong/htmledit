@@ -148,11 +148,13 @@ test('이미지 교체가 반응형 source보다 우선하며 HTML에 포함된�
   const frame = page.frameLocator('iframe');
   await frame.locator('img').click();
   await expect(page.getByRole('button', { name: '이미지 교체', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '이미지 교체', exact: true }).click();
   await page.getByTestId('image-file').setInputFiles({
     name: 'new.png',
     mimeType: 'image/png',
     buffer: Buffer.from(tinyImage, 'base64'),
   });
+  await page.getByRole('button', { name: '이미지 적용', exact: true }).click();
   await expect(frame.locator('source')).toHaveCount(0);
   await expect(frame.locator('img')).not.toHaveAttribute('srcset', /.+/);
   const clean = await download(page, '완성본 저장');
@@ -352,10 +354,11 @@ test('지원하지 않는 파일과 잘못된 이미지에 오류를 표시한�
     .getByTestId('html-file')
     .setInputFiles({ name: 'sample.html', mimeType: 'text/html', buffer: Buffer.from(fixture) });
   await page.frameLocator('iframe').locator('img').click();
+  await page.getByRole('button', { name: '이미지 교체', exact: true }).click();
   await page
     .getByTestId('image-file')
     .setInputFiles({ name: 'bad.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') });
-  await expect(page.getByRole('alert')).toContainText('PNG·JPEG');
+  await expect(page.locator('.image-error')).toContainText('PNG·JPEG');
 });
 
 test('끌어다 놓은 HTML을 열고 메모 표식에서 목록으로 이동한다', async ({ page }) => {
@@ -439,10 +442,10 @@ test('상위 카드 선택과 문서 안의 실행 취소·다시 실행 단축�
   await page.getByRole('dialog').getByRole('button', { name: '요소 삭제', exact: true }).click();
   await expect(frame.locator('article')).toHaveCount(0);
   await frame.locator('h1').click();
-  await frame.locator('h1').press('Control+z');
+  await frame.locator('h1').press('ControlOrMeta+z');
   await expect(frame.locator('article')).toHaveCount(1);
   await frame.locator('h1').click();
-  await frame.locator('h1').press('Control+Shift+z');
+  await frame.locator('h1').press('ControlOrMeta+Shift+z');
   await expect(frame.locator('article')).toHaveCount(0);
   await page.getByRole('button', { name: '실행 취소', exact: true }).click();
   await expect(frame.locator('article')).toHaveCount(1);

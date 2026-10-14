@@ -1,8 +1,9 @@
 import { build } from 'esbuild';
 import { mkdir, copyFile } from 'node:fs/promises';
 await build({
-  entryPoints: ['scripts/local/cli.ts'],
-  outfile: 'runtime/cli.mjs',
+  entryPoints: ['scripts/local/cli.ts', 'scripts/local/platform.ts'],
+  outdir: 'runtime',
+  outExtension: { '.js': '.mjs' },
   bundle: true,
   platform: 'node',
   target: 'node22',

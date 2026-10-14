@@ -1,5 +1,11 @@
 import type { Catalog } from './types';
 export default {
+  pickerNeedsDesktop:
+    'ファイル選択にはサーバー側のコンピューターで有効なデスクトップセッションが必要です。画面のない環境では、CLIの --no-browser オプションでファイルを開いてください。',
+  pickerToolMissing:
+    'ファイル選択ツール {tool} が見つかりません。Ubuntuでは zenity と xdg-utils をインストールして再試行してください。文書は変更されていません。',
+  pickerPlatformUnsupported:
+    'ファイル選択はデスクトップセッションのあるWindows、macOS、Ubuntuで利用できます。',
   connectingToTheWorkingFile: '作業ファイルに接続中…',
   draftReady: '一時保存の準備完了',
   htmlNotSavedYet: 'HTMLは未保存',
@@ -34,14 +40,14 @@ export default {
   couldNotVerifyTheNewDocumentConnection: '新しい文書の接続先を確認できませんでした。',
   couldNotOpenTheNewDocumentYour: '新しい文書を開けませんでした。現在の作業は維持されます。',
   applyOrCancelTheTextOrNote:
-    '入力中の文言やメモを適用またはキャンセルしてから、別の文書を開いてください。',
+    '編集中の文言・メモ・画像を適用またはキャンセルしてから、別の文書を開いてください。',
   saveYourCurrentWork: '現在の作業を保存しますか？',
   thereAreUnsavedChangesChooseWhetherTo:
-    '未保存の変更があります。保存するか選んでから、Windowsのファイル選択画面で別のHTMLを選んでください。選択をキャンセルすると現在の文書を維持します。',
+    '未保存の変更があります。保存するか選んでから、OSのファイル選択画面で別のHTMLを選んでください。選択をキャンセルすると現在の文書を維持します。',
   saveAndChooseDocument: '保存して文書を選択',
   chooseWithoutSaving: '保存せずに文書を選択',
   applyOrCancelTheTextOrNote34:
-    '入力中の文言やメモを適用またはキャンセルしてから、AIへの依頼をコピーしてください。',
+    '編集中の文言・メモ・画像を適用またはキャンセルしてから、AIへの依頼をコピーしてください。',
   yourWorkChangedWhileSavingApplyThe:
     '保存中に作業が変更されました。変更を適用してから、AIへの依頼をもう一度コピーしてください。',
   workingFileSavedAndAiRequestCopied:
@@ -69,9 +75,9 @@ export default {
   editDirectly: '直接編集',
   addNotes: 'メモを付ける',
   undo: '元に戻す',
-  undoCtrlZ: '元に戻す Ctrl+Z',
+  undoCtrlZ: '元に戻す Ctrl/Cmd+Z',
   redo: 'やり直す',
-  redoCtrlShiftZ: 'やり直す Ctrl+Shift+Z',
+  redoCtrlShiftZ: 'やり直す Ctrl/Cmd+Shift+Z',
   saveFinalHtml: '完成版を保存',
   saving: '保存中…',
   saveWorkingFile: '作業ファイルを保存',
@@ -193,7 +199,7 @@ export default {
   aSingleHtmlFileWithEmbeddedCss: 'CSSと画像を含む単一のHTMLファイルを推奨します。',
   makeSimpleEditsYourself: '簡単な修正は直接編集。',
   clickAnElementOrDoubleClickText:
-    '要素をクリック、文言をダブルクリックします。Ctrl+Enterで適用、Escでキャンセルできます。カード全体は「親要素を選択」で指定します。',
+    '要素をクリック、文言をダブルクリックします。Ctrl/Cmd+Enterで適用、Escでキャンセルできます。カード全体は「親要素を選択」で指定します。',
   leaveNotesForComplexChanges: '複雑な作業はメモで依頼。',
   selectAnElementAndDescribeTheChange:
     '要素を選び、前・後・内側などの位置と依頼内容を入力してください。',
@@ -208,7 +214,7 @@ export default {
   gotIt: 'わかりました',
   connectingAnotherDocument: '別の文書に接続中',
   selectAnHtmlDocumentInTheWindows:
-    'Windowsのファイル選択画面でHTML文書を選ぶか、キャンセルしてください。保存と接続が完了するまで現在の作業を維持します。',
+    'OSのファイル選択画面でHTML文書を選ぶか、キャンセルしてください。保存と接続が完了するまで現在の作業を維持します。',
   useMenusAndButtonsToNavigateThen:
     'メニューやボタンで移動してから「直接編集」を選んでください。このモードではスクリプトが実行されるため、信頼できる文書でのみ使用してください。',
   youAreEditingTheCurrentScreenUse:
@@ -259,7 +265,7 @@ export default {
   chooseAnHtmlOrHtmFile: '.htmlまたは.htmファイルを選んでください。',
   chooseAnHtmlFileUpTo25mb: '25MB以下のHTMLファイルを選んでください。',
   chooseAnHtmlFileSavedAsUtf: 'UTF-8で保存したHTMLを選んでください。',
-  chooseAReplacementImageUpTo10mb: '差し替える画像は10MB以下を選んでください。',
+  chooseAReplacementImageUpTo10mb: '画像は10MB以下を選んでください。',
   couldNotReadTheImageFile: '画像ファイルを読み込めませんでした。',
   anotherWindowIsUsingDraftStorage: '別のウィンドウが一時保存領域を使用しています。',
   couldNotFinishSavingTheDraft: '一時保存を完了できませんでした。',
@@ -358,5 +364,39 @@ export default {
   localWorkspace: 'ローカル作業スペース',
   fromAi: 'AIが作り、あなたが仕上げる',
   quickGuide: 'HTML EDIT · クイックガイド',
+  imageInsert: '画像を挿入',
+  imageSelectTarget: '先に画像を挿入する場所を選択してください。',
+  imagePosition: '挿入位置',
+  imageInsideLast: '内側の末尾',
+  imageInvalidPosition:
+    'ここには挿入できません。コンテンツ領域、表のセル、リスト項目、または親要素を選択してください。',
+  imageChooseFile: '画像ファイルを選択',
+  imageDropPaste: 'ここに画像を1枚ドロップするか、Ctrl+V / Cmd+Vで貼り付けてください。',
+  imageOneOnly: '画像は1枚ずつ追加してください。',
+  imagePasteFile:
+    '画像をコピーしてここに貼り付けてください。テキストやHTMLは画像として挿入されません。',
+  imageUrl: '画像URL',
+  imageFetch: '画像を読み込む',
+  imageInvalidUrl: '認証情報を含まないHTTPまたはHTTPSの画像URLを入力してください。',
+  imageUrlFailed:
+    '画像を取得できませんでした。サイトがダウンロードを制限している可能性があります。ローカルファイルか貼り付けを使用してください。',
+  imageUrlTimeout:
+    '画像のダウンロードがタイムアウトしました。ローカルファイルか貼り付けを使用してください。',
+  imageInvalidData: '指定形式の画像としてファイルを読み込めませんでした。',
+  imageSizing: '画像サイズ',
+  imageOriginal: '元のサイズ（領域に収める）',
+  imagePercent: '領域に対する幅',
+  imageWidth: '幅 (%)',
+  imageInvalidSize: '幅を1〜100%で入力し、配置を選択してください。',
+  imageAlignment: '画像の配置',
+  imageLeft: '左',
+  imageCenter: '中央',
+  imageRight: '右',
+  imageAlt: '代替テキスト',
+  imagePreview: '画像プレビュー・未適用',
+  imageProperties: '画像のサイズ・配置',
+  imageApply: '画像を適用',
+  imageEmbeddedHint:
+    'PNG・JPEG・WebP・GIF、1枚10MBまで。HTML内に保存します。HTML全体の上限は25MBです。',
   appTitle: 'HTMLEdit · 画面で直して、メモで伝える',
 } satisfies Catalog;
