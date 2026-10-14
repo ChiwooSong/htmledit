@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [한국어](README.ko.md) · [Español](README.es.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt-BR.md)
 
-AIが生成したHTMLを画面上で編集し、要素ごとにメモを付けてClaude CodeやCodexに反映を依頼するローカルツールです。アカウントやAI APIキーは不要です。1.4.0候補の検証対象はWindowsのChrome・Edge、Ubuntu 24.04・WSL2/WSLgのChrome、macOS 15.6.1 Apple SiliconのChrome・Safariです。完了・未完了の項目は検証記録を参照してください。
+AIが生成したHTMLを画面上で編集し、要素ごとにメモを付けてClaude CodeやCodexに反映を依頼するローカルツールです。アカウントやAI APIキーは不要です。1.4.0では画像挿入機能を追加しました。主な対応環境はWindowsのChrome・Edgeです。Linux・macOSは試験的対応です。Ubuntu 24.04 WSL2とmacOS 15.6.1 Apple SiliconではChromeの自動テストが通過しましたが、SafariとOS標準ファイル選択画面の手動検証は未完了です。
 
 ## インストールと文書を開く手順
 

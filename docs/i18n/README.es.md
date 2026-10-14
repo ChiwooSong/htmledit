@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [한국어](README.ko.md) · [Español](README.es.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt-BR.md)
 
-Edita visualmente HTML creado por IA, deja notas en elementos concretos y pide a Claude Code o Codex que las aplique. HTMLEdit funciona localmente, sin cuenta ni clave de API de IA. La versión candidata 1.4.0 se valida en Windows con Chrome/Edge, Ubuntu 24.04 con WSL2/WSLg y Chrome, y macOS 15.6.1 Apple Silicon con Chrome/Safari. Consulta las comprobaciones completadas y pendientes en el registro de verificación.
+Edita visualmente HTML creado por IA, deja notas en elementos concretos y pide a Claude Code o Codex que las aplique. HTMLEdit funciona localmente, sin cuenta ni clave de API de IA. La versión 1.4.0 añade la inserción de imágenes. Windows con Chrome/Edge sigue siendo el entorno principal. Linux/macOS son experimentales: las pruebas automáticas con Chrome pasaron en Ubuntu 24.04 WSL2 y macOS 15.6.1 Apple Silicon; Safari y los selectores nativos aún no se han verificado manualmente.
 
 ## Instalar y abrir
 

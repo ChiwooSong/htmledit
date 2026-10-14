@@ -1,6 +1,6 @@
 # Desktop and remote sessions
 
-The 1.4.0 candidate targets Windows Chrome/Edge, Ubuntu 24.04 with WSL2/WSLg Chrome, and macOS 15.6.1 Apple Silicon with Chrome/Safari. Consult the packaged verification record for actual completed checks. Do not generalize WSL results to every Linux desktop, or Apple Silicon results to Intel Macs.
+Version 1.4.0 primarily supports Windows Chrome/Edge. Linux/macOS launchers and pickers are experimental. Automated Chrome tests passed on Ubuntu 24.04 WSL2 and macOS 15.6.1 Apple Silicon; Safari and native picker interaction remain unverified. Consult the packaged verification record for actual completed checks. Do not generalize WSL results to every Linux desktop, or Apple Silicon results to Intel Macs.
 
 Ubuntu file selection requires zenity and a graphical desktop. Browser opening requires xdg-utils and an installed browser. WSLg must use Linux Node and Linux Chrome; Windows browser access is a separate interoperability path. macOS uses its built-in file picker and Cmd editing shortcuts.
 
