@@ -452,22 +452,61 @@ test('세 가지 요청을 반영한 결과에서 완료 메모와 디자인을 
   await page.screenshot({ path: testInfo.outputPath('ai-result.png'), fullPage: true });
 });
 
-test('원본 예제와 완성본의 브라우저 렌더링이 같다', async ({ page }) => {
+test('원본 예제와 완성본의 브라우저 렌더링이 같다', async ({ page }, testInfo) => {
   const original = await readFile('public/examples/onyu-studio.html', 'utf8');
   const clean = exportDocument(readDocument(original), 'clean');
-  await page.setContent(original);
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.all(Array.from(document.images).map((image) => image.decode()));
-  });
-  const before = await page.screenshot({ fullPage: true });
-  await page.setContent(clean);
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.all(Array.from(document.images).map((image) => image.decode()));
-  });
-  const after = await page.screenshot({ fullPage: true });
-  expect(after.equals(before)).toBe(true);
+  const capture = async (html: string, name: string) => {
+    await page.setContent(html);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await Promise.all(Array.from(document.images).map((image) => image.decode()));
+    });
+    // Full-page capture can trigger another compositor paint on macOS. Require
+    // consecutive identical captures before comparing the two documents.
+    let previous = await page.screenshot({ fullPage: true });
+    await expect
+      .poll(async () => {
+        const current = await page.screenshot({ fullPage: true, path: testInfo.outputPath(name) });
+        const settled = current.equals(previous);
+        previous = current;
+        return settled;
+      })
+      .toBe(true);
+    return previous;
+  };
+  const before = await capture(original, 'original.png');
+  const after = await capture(clean, 'exported.png');
+  // macOS can round composited channels by 1–3/255 across identical paints.
+  // Compare every decoded pixel with only that channel tolerance, not a budget
+  // of missing/shifted pixels or a percentage of allowed visual differences.
+  const difference = await page.evaluate(
+    async (screenshots) => {
+      const pixels = await Promise.all(
+        screenshots.map(async (source) => {
+          const image = new Image();
+          image.src = source;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext('2d')!;
+          context.drawImage(image, 0, 0);
+          return context.getImageData(0, 0, canvas.width, canvas.height);
+        }),
+      );
+      const [a, b] = pixels;
+      let maxChannelDelta = 0;
+      if (a.width === b.width && a.height === b.height) {
+        for (let i = 0; i < a.data.length; i++) {
+          maxChannelDelta = Math.max(maxChannelDelta, Math.abs(a.data[i] - b.data[i]));
+        }
+      }
+      return { sameSize: a.width === b.width && a.height === b.height, maxChannelDelta };
+    },
+    [before, after].map((buffer) => `data:image/png;base64,${buffer.toString('base64')}`),
+  );
+  expect(difference.sameSize).toBe(true);
+  expect(difference.maxChannelDelta).toBeLessThanOrEqual(3);
 });
 
 test('상위 카드 선택과 문서 안의 실행 취소·다시 실행 단축키', async ({ page }) => {
