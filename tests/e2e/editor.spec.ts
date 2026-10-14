@@ -183,7 +183,33 @@ test('대상 삭제·실행 취소·메모 재지정이 연결을 유지한다',
 test('최근 작업을 IndexedDB에서 복구한다', async ({ page }) => {
   await open(page);
   await note(page, '임시 복구 메모');
-  await expect(page.locator('.app-footer')).toContainText(/임시 저장 .*\d{2}:\d{2}/);
+  // A timestamp can belong to the initial document save; wait for this edit's transaction.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<string[]>((resolve, reject) => {
+            const request = indexedDB.open('htmledit-local', 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+              const db = request.result;
+              const transaction = db.transaction('drafts', 'readonly');
+              const draft = transaction.objectStore('drafts').get('latest');
+              transaction.oncomplete = () => {
+                db.close();
+                resolve(
+                  draft.result?.session.notes.map((note: { text: string }) => note.text) ?? [],
+                );
+              };
+              transaction.onerror = () => {
+                db.close();
+                reject(transaction.error);
+              };
+            };
+          }),
+      ),
+    )
+    .toContain('임시 복구 메모');
   page.once('dialog', (dialog) => dialog.accept());
   await page.reload();
   await expect(page.getByRole('button', { name: '복구하기', exact: true })).toBeVisible();
@@ -321,6 +347,17 @@ test('단순 재저장은 시각 결과를 유지하고 AI 메모를 문서에 �
   await page.addStyleTag({
     content: '.frame-wrap, .frame-wrap iframe { border-radius: 0 !important; }',
   });
+  const ready = async () => {
+    await page
+      .frameLocator('iframe')
+      .locator('body')
+      .evaluate(async () => {
+        await document.fonts.ready;
+        await Promise.all(Array.from(document.images, (image) => image.decode().catch(() => {})));
+      });
+    await page.mouse.move(0, 0);
+  };
+  await ready();
   const before = await page
     .locator('iframe')
     .screenshot({ path: testInfo.outputPath('before.png') });
@@ -330,6 +367,7 @@ test('단순 재저장은 시각 결과를 유지하고 AI 메모를 문서에 �
     .setInputFiles({ name: clean.name, mimeType: 'text/html', buffer: Buffer.from(clean.content) });
   await expect(page.frameLocator('iframe').locator('h1')).toHaveText('처음 제목');
   await page.getByRole('button', { name: '알림 닫기', exact: true }).click();
+  await ready();
   const after = await page.locator('iframe').screenshot({ path: testInfo.outputPath('after.png') });
   expect(after.equals(before)).toBe(true);
   const review = await readFile('public/examples/onyu-studio.review.html', 'utf8');
