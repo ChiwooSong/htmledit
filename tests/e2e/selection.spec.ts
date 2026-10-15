@@ -43,7 +43,7 @@ for (const locale of locales) {
       translate(locale, key, ...args);
     const frame = page.frameLocator('iframe');
     await frame.locator('h1').click();
-    await frame.locator('p').click({ modifiers: ['Control'] });
+    await frame.locator('p').click({ modifiers: ['ControlOrMeta'] });
     await expect(page.locator('.selection-outline')).toHaveCount(2);
     await expect(
       page.getByRole('textbox', {
@@ -51,7 +51,7 @@ for (const locale of locales) {
         exact: true,
       }),
     ).toHaveCount(0);
-    await frame.locator('p').click({ modifiers: ['Control'] });
+    await frame.locator('p').click({ modifiers: ['ControlOrMeta'] });
     await expect(page.locator('.selection-outline')).toHaveCount(1);
     await frame.locator('p').click({ modifiers: ['Meta'] });
     await expect(page.locator('.selection-outline')).toHaveCount(2);
@@ -98,7 +98,7 @@ for (const locale of locales) {
     );
     await expect(page.getByTestId('note-card')).toHaveCount(1);
     await expect(page.locator('.note-target-list button:disabled')).toHaveCount(2);
-    await page.keyboard.press('Control+z');
+    await page.keyboard.press('ControlOrMeta+z');
     await expect(frame.locator('h1,p')).toHaveCount(2);
     await expect(page.locator('.note-marker')).toHaveCount(2);
     const clean = await saved(page, locale, 'clean');
@@ -116,11 +116,11 @@ test('Delete from iframe is immediate, undo/redo work, text input and document b
   await page.keyboard.press('Delete');
   await expect(frame.locator('h1')).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.keyboard.press('Control+z');
+  await page.keyboard.press('ControlOrMeta+z');
   await expect(frame.locator('h1')).toHaveText('첫 제목');
-  await page.keyboard.press('Control+y');
+  await page.keyboard.press('ControlOrMeta+y');
   await expect(frame.locator('h1')).toHaveCount(0);
-  await page.keyboard.press('Control+z');
+  await page.keyboard.press('ControlOrMeta+z');
   await expect(frame.locator('h1')).toBeVisible();
   await frame.locator('h1').click();
   const text = page.getByRole('textbox', { name: '문구 1', exact: true });
@@ -155,7 +155,7 @@ test('note-mode selection preserves typed requests and partial missing groups ca
   await input.press('Delete');
   await expect(input).toHaveValue('칠 문구');
   await expect(frame.locator('h1')).toHaveText('첫 제목');
-  await frame.locator('p').click({ modifiers: ['Control'] });
+  await frame.locator('p').click({ modifiers: ['ControlOrMeta'] });
   await expect(page.locator('.selection-outline')).toHaveCount(2);
   await expect(input).toHaveValue('칠 문구');
   await page.getByRole('button', { name: '메모 추가', exact: true }).click();
@@ -170,7 +170,7 @@ test('note-mode selection preserves typed requests and partial missing groups ca
   await expect(page.locator('.selection-outline')).toHaveCount(1);
   await page.getByRole('button', { name: '대상 재지정', exact: true }).click();
   await frame.locator('p').click();
-  await frame.locator('footer').click({ modifiers: ['Control'] });
+  await frame.locator('footer').click({ modifiers: ['ControlOrMeta'] });
   await page.getByRole('button', { name: '선택한 요소에 연결', exact: true }).click();
   await expect(page.locator('.note-target-list button:disabled')).toHaveCount(0);
   await expect(page.locator('.note-marker')).toHaveCount(2);
@@ -197,7 +197,7 @@ test('joint note checkout/apply preserves targets, backups and automatic refresh
     const frame = page.frameLocator('iframe');
     await expect(frame.locator('h1')).toBeVisible();
     await frame.locator('h1').click();
-    await frame.locator('p').click({ modifiers: ['Control'] });
+    await frame.locator('p').click({ modifiers: ['ControlOrMeta'] });
     await page.getByRole('button', { name: '선택한 요소에 메모 하나 남기기' }).click();
     await page
       .getByRole('textbox', { name: '수정 요청', exact: true })

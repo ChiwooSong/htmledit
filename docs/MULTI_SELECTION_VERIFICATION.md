@@ -41,4 +41,6 @@ Ignored local evidence: `demo.review.html`, `apply-user-note.mjs`, `verify-user-
 
 ## Limits
 
+Release CI initially passed Ubuntu, but seven new macOS browser cases failed at multi-selection because the test sent literal Control+click. macOS treats that chord as a secondary click; the documented application shortcut is Cmd+click. The tests now use Playwright's `ControlOrMeta` modifier (Control on Windows/Linux, Meta on macOS) for the primary workflow and undo/redo. The explicit Meta-click coverage remains. This corrects the OS input in the tests without changing application selection behavior; the final release is gated on CI for the corrected commit.
+
 The candidate edits in the automated and CLI checks were deterministic test transformations; the separate actual Codex application is recorded above. Native macOS Cmd+click, Safari and Linux desktop use were not manually rerun for this feature; Meta-click simulation on Windows is recorded separately. Five-language functional checks are not native-speaker translation review. Release CI on Ubuntu/macOS is separate from native desktop/Safari verification.
