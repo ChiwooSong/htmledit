@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { previewHtml, noteTargets, TARGET_ATTR, type DocumentSession } from '../model/document';
 import InteractivePreview from './InteractivePreview';
 import { applyViewState, type ViewState } from '../preview/interaction';
+import { allowsParentEvents, scrollPreview } from '../preview/events';
 
 interface Props {
   insertion?: 'before' | 'after' | 'inside' | 'self';
@@ -39,6 +40,8 @@ export default function Preview(props: Props) {
   const { t } = useLocale();
   const frame = useRef<HTMLIFrameElement>(null);
   const wrapper = useRef<HTMLDivElement>(null);
+  const eventSurface = useRef<HTMLDivElement>(null);
+  const [parentEvents, setParentEvents] = useState(false);
   const latest = useRef(props);
   latest.current = props;
   const cleanup = useRef<(() => void) | null>(null);
@@ -156,6 +159,21 @@ export default function Preview(props: Props) {
     editValue.current = null;
     const doc = frame.current?.contentDocument;
     if (!doc) return;
+    const surface = eventSurface.current!;
+    const fallback = !allowsParentEvents(doc);
+    setParentEvents(fallback);
+    const point = (event: MouseEvent) => {
+      const rect = frame.current!.getBoundingClientRect();
+      return event.currentTarget === surface
+        ? { x: event.clientX - rect.left, y: event.clientY - rect.top }
+        : { x: event.clientX, y: event.clientY };
+    };
+    const targetAt = (event: MouseEvent) => {
+      const p = point(event);
+      return event.currentTarget === surface
+        ? doc.elementFromPoint(p.x, p.y)
+        : (event.target as Element);
+    };
     if (doc.scrollingElement) doc.scrollingElement.scrollTop = restoreScroll.current;
     if (viewState) {
       frame.current?.contentWindow?.scrollTo(viewState.x, viewState.y);
@@ -169,8 +187,8 @@ export default function Preview(props: Props) {
     }
     const select = (event: MouseEvent) => {
       event.preventDefault();
-      const target = event.target as Element;
-      const element = target.closest?.(`[${TARGET_ATTR}]`);
+      const target = targetAt(event);
+      const element = target?.closest(`[${TARGET_ATTR}]`);
       if (!element) return;
       const id = element.getAttribute(TARGET_ATTR)!;
       const additive = event.ctrlKey || event.metaKey;
@@ -185,9 +203,10 @@ export default function Preview(props: Props) {
         caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node } | null;
         caretRangeFromPoint?: (x: number, y: number) => Range | null;
       };
+      const { x, y } = point(event);
       const node =
-        pointDoc.caretPositionFromPoint?.(event.clientX, event.clientY)?.offsetNode ??
-        pointDoc.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer;
+        pointDoc.caretPositionFromPoint?.(x, y)?.offsetNode ??
+        pointDoc.caretRangeFromPoint?.(x, y)?.startContainer;
       if (!node || node.nodeType !== Node.TEXT_NODE || !node.textContent?.trim()) return;
       const parent = node.parentElement;
       if (
@@ -237,15 +256,40 @@ export default function Preview(props: Props) {
         !event.repeat
       ) {
         event.preventDefault();
+        event.stopPropagation();
         latest.current.onDelete();
         return;
       }
       if ((event.ctrlKey || event.metaKey) && ['z', 'y'].includes(event.key.toLowerCase())) {
         event.preventDefault();
+        event.stopPropagation();
         latest.current.onHistory(
           event.key.toLowerCase() === 'y' || event.shiftKey ? 'redo' : 'undo',
         );
         return;
+      }
+      if (event.currentTarget === surface && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const height = frame.current!.clientHeight;
+        const offsets: Record<string, [number, number]> = {
+          ArrowDown: [0, 40],
+          ArrowUp: [0, -40],
+          ArrowLeft: [-40, 0],
+          ArrowRight: [40, 0],
+          PageDown: [0, height * 0.9],
+          PageUp: [0, -height * 0.9],
+          ' ': [0, height * (event.shiftKey ? -0.9 : 0.9)],
+          Home: [0, -Number.MAX_SAFE_INTEGER],
+          End: [0, Number.MAX_SAFE_INTEGER],
+        };
+        const offset = offsets[event.key];
+        if (offset) {
+          event.preventDefault();
+          event.stopPropagation();
+          const selected = latest.current.selectedId && getTarget(latest.current.selectedId);
+          scrollPreview(doc, selected || doc.scrollingElement, ...offset);
+          schedule();
+          return;
+        }
       }
       if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
     };
@@ -254,6 +298,24 @@ export default function Preview(props: Props) {
       cancelAnimationFrame(pending);
       pending = requestAnimationFrame(measure);
     };
+    const focusSurface = (event: MouseEvent) => {
+      event.preventDefault();
+      surface.focus({ preventScroll: true });
+    };
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const factor =
+        event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? frame.current!.clientHeight : 1;
+      scrollPreview(doc, targetAt(event), event.deltaX * factor, event.deltaY * factor);
+      schedule();
+    };
+    if (fallback) {
+      surface.addEventListener('mousedown', focusSurface);
+      surface.addEventListener('click', select);
+      surface.addEventListener('dblclick', dblclick);
+      surface.addEventListener('keydown', onKey);
+      surface.addEventListener('wheel', wheel, { passive: false });
+    }
     doc.addEventListener('click', select, true);
     doc.addEventListener('dblclick', dblclick, true);
     doc.addEventListener('submit', prevent, true);
@@ -278,6 +340,11 @@ export default function Preview(props: Props) {
       doc.removeEventListener('mouseover', schedule, true);
       doc.fonts?.removeEventListener('loadingdone', schedule);
       window.removeEventListener('resize', schedule);
+      surface.removeEventListener('mousedown', focusSurface);
+      surface.removeEventListener('click', select);
+      surface.removeEventListener('dblclick', dblclick);
+      surface.removeEventListener('keydown', onKey);
+      surface.removeEventListener('wheel', wheel);
     };
     setReady((value) => value + 1);
     schedule();
@@ -320,6 +387,14 @@ export default function Preview(props: Props) {
           hidden={interacting}
           srcDoc={srcDoc}
           onLoad={attach}
+        />
+        <div
+          ref={eventSurface}
+          className="preview-event-surface"
+          hidden={!parentEvents || interacting}
+          tabIndex={parentEvents && !interacting ? 0 : -1}
+          role="region"
+          aria-label={t('documentPreview')}
         />
         {(hasInteracted || interacting) && (
           <InteractivePreview

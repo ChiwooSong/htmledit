@@ -56,6 +56,7 @@ import {
 import { commit, createHistory, redo, undo, type History } from './model/history';
 import { deleteDraft, loadDraft, saveDraft, type Draft } from './io/drafts';
 import { assertHtmlSize, downloadHtml, readHtmlFile } from './io/files';
+import { copyWhenReady } from './io/clipboard';
 import {
   connectionToken,
   localRequest,
@@ -634,16 +635,19 @@ export default function App() {
     setCopying(true);
     const signature = JSON.stringify(session);
     try {
-      if (!(await save('review'))) return;
-      if (
-        JSON.stringify(sessionRef.current) !== signature ||
-        pendingInput.current ||
-        document.querySelector('[data-htmledit-inline-editor]')
-      ) {
-        notify(message('yourWorkChangedWhileSavingApplyThe'), true);
-        return;
-      }
-      await navigator.clipboard.writeText(handoffText);
+      const copied = await copyWhenReady(async () => {
+        if (!(await save('review'))) return null;
+        if (
+          JSON.stringify(sessionRef.current) !== signature ||
+          pendingInput.current ||
+          document.querySelector('[data-htmledit-inline-editor]')
+        ) {
+          notify(message('yourWorkChangedWhileSavingApplyThe'), true);
+          return null;
+        }
+        return handoffText;
+      });
+      if (!copied) return;
       notify(
         connected
           ? message('workingFileSavedAndAiRequestCopied')

@@ -510,6 +510,16 @@ svg {
   pointer-events: none;
   overflow: hidden;
 }
+.preview-event-surface {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+  touch-action: none;
+}
+.preview-event-surface:focus-visible {
+  outline: 2px solid #668b6a;
+  outline-offset: -2px;
+}
 .selection-outline {
   position: absolute;
   border: 1.5px solid #668b6a;

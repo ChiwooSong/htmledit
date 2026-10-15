@@ -1,5 +1,7 @@
 # Skills 검증 기록
 
+1.5.0 integration (2026-10-15): [Safari fixes, multi-selection, batch deletion and joint-note regression results](SAFARI_150_INTEGRATION.md). Windows Chrome/Edge passed 132 cases; Ubuntu and Mac Chrome passed 66 each; all three OS unit suites passed 86 tests. Actual Claude joint-note checkout/apply, target preservation, backup and automatic refresh passed in WSLg Chrome, Mac Chrome and actual Safari. These results describe the 1.5.0-based test candidate. The user subsequently approved release 1.5.1; see [the release record](RELEASE_1.5.1.md) for publication verification.
+
 ## 2026-10-15 — Multi-selection and immediate deletion (1.5.0)
 
 Implemented Ctrl/Cmd+click selection, immediate Delete with one-step undo, and one joint note linked to multiple elements. Review v1 remains supported; joint-note files use v2 to prevent older runtimes from silently dropping targets. See [behavior, environment, evidence and limits](MULTI_SELECTION_VERIFICATION.md). Build, 82 unit tests, 114 Windows Chrome/Edge regression cases, 16 final focused browser cases, built CLI checkout/apply and package lifecycle checks passed. A separate actual Codex request swapped two user-selected headings through checkout/apply, preserved the complete targets list, completed only the fulfilled note, and verified exact backup bytes and the rendered result. Native Linux/macOS/Safari use and actual Claude interpretation were not rerun. Version 1.5.0 uses the existing main CI → tag → trusted-publishing workflow; final publication receipts are recorded in its GitHub release.

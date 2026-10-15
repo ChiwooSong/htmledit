@@ -30,7 +30,7 @@ AI가 만든 HTML을 열고, 간단한 문구는 직접 고치고, 복잡한 변
 4. AI가 반영한 결과와 완료된 메모를 확인합니다.
 5. **완성본 저장**으로 메모 없는 HTML을 받습니다.
 
-HTMLEdit에는 별도 계정이나 API 키가 필요하지 않습니다. AI 도구는 해당 서비스의 계정과 요금 정책을 사용합니다. 1.4.0에는 이미지 삽입 기능이 추가되었습니다. 기본 지원 환경은 Windows Chrome·Edge입니다. Linux·macOS 실행과 파일 선택 기능은 실험적으로 제공하며, Ubuntu 24.04 WSL2 및 macOS 15.6.1 Apple Silicon의 Chrome 자동 검사는 통과했습니다. Safari와 기본 파일 선택창의 수동 검증은 아직 완료하지 않았습니다.
+HTMLEdit에는 별도 계정이나 API 키가 필요하지 않습니다. AI 도구는 해당 서비스의 계정과 요금 정책을 사용합니다. 1.4.0에는 이미지 삽입 기능이 추가되었습니다. 기본 지원 환경은 Windows Chrome·Edge입니다. Linux·macOS 실행과 파일 선택 기능은 실험적으로 제공하며, Ubuntu 24.04 WSL2 및 macOS 15.6.1 Apple Silicon의 Chrome 자동 검사는 통과했습니다. 1.5.1 후보에서는 실제 Safari 18.6 편집과 Claude 공동 메모 반영도 통과했습니다. 한글 입력 수동 확인과 이전 파일 선택창 검증은 [환경별 기록](../SAFARI_150_INTEGRATION.md)에 구분해 두었습니다.
 
 ## 설치와 열기
 

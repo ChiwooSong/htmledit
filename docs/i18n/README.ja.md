@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [한국어](README.ko.md) · [Español](README.es.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt-BR.md)
 
-AIが生成したHTMLを画面上で編集し、要素ごとにメモを付けてClaude CodeやCodexに反映を依頼するローカルツールです。アカウントやAI APIキーは不要です。1.4.0では画像挿入機能を追加しました。主な対応環境はWindowsのChrome・Edgeです。Linux・macOSは試験的対応です。Ubuntu 24.04 WSL2とmacOS 15.6.1 Apple SiliconではChromeの自動テストが通過しましたが、SafariとOS標準ファイル選択画面の手動検証は未完了です。
+AIが生成したHTMLを画面上で編集し、要素ごとにメモを付けてClaude CodeやCodexに反映を依頼するローカルツールです。アカウントやAI APIキーは不要です。1.4.0では画像挿入機能を追加しました。主な対応環境はWindowsのChrome・Edgeです。Linux・macOSは試験的対応です。Ubuntu 24.04 WSL2とmacOS 15.6.1 Apple SiliconではChromeの自動テストが通過しましたが、1.5.1候補では実際のSafari 18.6での編集とClaudeによる共同メモの反映も通過しました。韓国語入力の手動確認と以前のファイル選択画面の検証は[環境別の記録](../SAFARI_150_INTEGRATION.md)に分けて記載しています。
 
 ## インストールと文書を開く手順
 
