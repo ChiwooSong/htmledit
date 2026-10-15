@@ -4,6 +4,23 @@
 
 AIが生成したHTMLを画面上で編集し、要素ごとにメモを付けてClaude CodeやCodexに反映を依頼するローカルツールです。アカウントやAI APIキーは不要です。1.4.0では画像挿入機能を追加しました。主な対応環境はWindowsのChrome・Edgeです。Linux・macOSは試験的対応です。Ubuntu 24.04 WSL2とmacOS 15.6.1 Apple SiliconではChromeの自動テストが通過しましたが、1.5.1候補では実際のSafari 18.6での編集とClaudeによる共同メモの反映も通過しました。韓国語入力の手動確認と以前のファイル選択画面の検証は[環境別の記録](../SAFARI_150_INTEGRATION.md)に分けて記載しています。
 
+## 複数の要素に1つの依頼を付ける
+
+**共同メモ**は複数の要素を1つの変更依頼にまとめます。例えば「この2つの見出しの位置を入れ替えてください。文言はそのままにしてください」と依頼できます。
+
+1. 最初の見出しをクリックし、**Ctrl+クリック**で2つ目を追加します。Macでは**Cmd+クリック**を使います。
+2. **選択した要素に1つのメモを追加**を押し、依頼を書いてメモを追加します。両方の見出しに同じ番号が表示されます。
+3. **保存してAIへの依頼をコピー**を押し、Claude CodeまたはCodexとの会話に貼り付けます。ボタンは先に作業ファイルを保存します。AIへの依頼は会話で送信します。
+4. AIがスキルを使って反映すると、接続モードでは未保存の変更がない場合に同じエディターが自動更新されます。結果ファイルを探して開き直す必要はありません。
+
+### 公開済み1.5.1で確認した結果
+
+**First → Second**の順番が**Second → First**に変わりました。2か所の緑の**1**は同じ共同メモの完了を示します。見出しの文言と残りの段落は維持されています。
+
+![公開済みHTMLEdit 1.5.1でCodexが見出しを入れ替えた結果。緑の1は同じ共同メモの完了を示す](https://raw.githubusercontent.com/ChiwooSong/htmledit/90426598ece364c2dc9f88ca8204646acd341d5f/docs/verification/1.5.1/codex-after.png)
+
+**Windows ChromeのCodex**と**Ubuntu WSLg Chromeの認証済みClaude Code**で、それぞれ実際のAIが依頼を解釈して反映しました。自動更新、対象と元ファイルの保持、バックアップのバイト一致、完成版の書き出しを両方で確認しました。ブラウザー操作は自動化しています。[Claudeの結果画面](https://raw.githubusercontent.com/ChiwooSong/htmledit/90426598ece364c2dc9f88ca8204646acd341d5f/docs/verification/1.5.1/claude-after.png)と[1.5.1の検証記録・変更前後のHTML・検証範囲](../PUBLISHED_1.5.1_VERIFICATION.md)をご覧ください。
+
 ## インストールと文書を開く手順
 
 Node.js **22.12以上**と、PC上で実行するClaude CodeまたはCodexが必要です。HTMLEditのソースリポジトリ以外のフォルダーで実行してください。

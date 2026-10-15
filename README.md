@@ -10,17 +10,33 @@ Built for the moment when explaining “the paragraph under the second card” t
 
 **Local editor · Claude Code & Codex skills · Five UI languages · MIT licensed**
 
-## See it in action
+## One request across several elements
 
-Three requests on a real HTML document: rename a heading, add a home icon before it, and remove another card's description.
+A **joint note** connects one request to several selected elements. For example, select two headings and ask:
 
-![HTMLEdit with three element-linked requests beside the selected document](https://raw.githubusercontent.com/ChiwooSong/htmledit/main/docs/media/notes-before.png)
+> Swap the positions of these two headings. Keep their text unchanged.
 
-The result after this Codex session read the saved notes and applied them through the installed skill:
+1. **Select the targets.** Click the first heading, then Ctrl+click the second (Cmd+click on Mac).
+2. **Leave one request.** Choose **Add one note to selected elements**, write the request and add the note. The same note number appears beside both headings.
+3. **Save and hand it to your AI.** Click **Save and copy AI request**, then paste into Claude Code or Codex. The button saves the working file before copying; you send the request in your AI conversation.
+4. **Watch the result in the same editor.** The AI applies the saved request through the installed skill. In connected mode, the open editor refreshes automatically when there are no unsaved changes. You do not need to find and open another output file.
 
-![The heading changed, a home icon was added, and the description was removed; all three notes are complete](https://raw.githubusercontent.com/ChiwooSong/htmledit/main/docs/media/notes-after.png)
+### Verified with the published 1.5.1 package
 
-Captured from the published **1.3.0** package on Windows Chrome. Browser actions were automated; this interactive Codex session interpreted the saved requests and edited the checked-out candidate. [Read the verification and inspect the before/after HTML](docs/AI_WORKFLOW_VERIFICATION.md).
+In this test, **First → Second** became **Second → First**. The two green **1** markers below represent the same completed joint note. The heading text and the unrelated paragraph stayed intact.
+
+![Published HTMLEdit 1.5.1 after Codex swapped the two headings; both green markers show completed joint note 1](https://raw.githubusercontent.com/ChiwooSong/htmledit/90426598ece364c2dc9f88ca8204646acd341d5f/docs/verification/1.5.1/codex-after.png)
+
+**Codex on Windows Chrome** and **authenticated Claude Code on Ubuntu WSLg Chrome** each interpreted and applied the request in separate runs. Both passed automatic refresh, target preservation, original-file preservation, byte-identical backup checks and final HTML export. Browser actions were automated; both AI applications were real.
+
+<details>
+<summary>See the separate Claude result</summary>
+
+![Published HTMLEdit 1.5.1 after native Claude applied the joint note in WSLg Chrome](https://raw.githubusercontent.com/ChiwooSong/htmledit/90426598ece364c2dc9f88ca8204646acd341d5f/docs/verification/1.5.1/claude-after.png)
+
+</details>
+
+[Read the 1.5.1 verification and inspect the before/after HTML](docs/PUBLISHED_1.5.1_VERIFICATION.md). These results cover the environments above; [earlier single-element examples](docs/AI_WORKFLOW_VERIFICATION.md) remain available.
 
 ## What you can do
 
@@ -28,12 +44,13 @@ Captured from the published **1.3.0** package on Windows Chrome. Browser actions
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Edit text, color and font size; insert or replace images; delete elements | Ask for new elements or layout changes using saved notes           |
 | Attach a request to an element, or its before/after/inside position       | Give the AI an exact target without describing its screen location |
+| Select several elements and attach one joint note                         | Ask the AI to change them together as one request                  |
 | Save and copy the AI request                                              | Paste it into Claude Code or Codex to apply the notes              |
 | Review the updated document and completed notes                           | Keep a backup of the previous file and export clean HTML           |
 
 ## Install and open
 
-Requires **Node.js 22.12+** and a local Claude Code or Codex session. Version **1.4.0** adds image insertion. **Windows Chrome and Edge** remain the primary supported desktop environment. Your AI tool uses its own account; HTMLEdit needs no separate account or API key.
+Requires **Node.js 22.12+** and a local Claude Code or Codex session. Update both the editor and the skill before using joint notes. **Windows Chrome and Edge** remain the primary supported desktop environment. Your AI tool uses its own account; HTMLEdit needs no separate account or API key.
 
 Run these commands in your document folder, outside the HTMLEdit source checkout:
 
@@ -47,9 +64,9 @@ Use `--agent claude` or `--agent codex` to install one skill. In a new AI sessio
 ## Your next edit
 
 1. **Open your HTML.** HTMLEdit creates `document.review.html` beside the original. Existing review files can be reopened.
-2. **Edit or leave a note.** Change small details directly. Select an element and write a request for anything more involved.
+2. **Edit or leave a note.** Change small details directly. Select one or more elements and leave one request for the change you want.
 3. **Save and copy AI request.** Paste the copied request into your AI conversation.
-4. **Review the result.** The AI applies the saved notes through the skill. The editor refreshes automatically when there are no unsaved changes.
+4. **Review the result.** The AI applies the saved notes through the skill. In connected mode, the editor refreshes automatically when there are no unsaved changes.
 5. **Save final HTML.** Export the edited document without notes or editor identifiers.
 
 The editor runs locally. HTMLEdit does not call an AI API or collect usage telemetry. When you ask your AI to process a file, that AI service's fees and data policies apply.
@@ -70,7 +87,7 @@ Best suited to static documents, landing pages and reports with embedded styles 
 
 External resources must remain accessible. Related local asset folders are not collected. React apps, runtime Tailwind and dynamic charts are outside the supported scope. Trusted inline menus and tabs can be navigated in **Interact** mode before editing.
 
-The demonstrated Codex workflow passed note application, automatic refresh, backup, reload and clean export. Claude Code Remote Control also passed a separate five-language workflow with manual approvals on the 1.3.0 candidate; [see the recorded evidence](docs/SKILLS_VERIFICATION.md#separate-claude-use-successful-manual-approval-follow-up). These checks do not establish unattended CLI operation. Version 1.4.0 also includes experimental Linux/macOS launchers and file pickers. The 1.5.1 candidate passed Chrome regressions on Ubuntu 24.04 WSL2/WSLg and macOS 15.6.1 Apple Silicon, plus actual Safari 18.6 editing and Claude joint-note application. Manual IME and earlier native picker results are recorded separately. See the [environment-specific evidence](docs/SAFARI_150_INTEGRATION.md).
+Published 1.5.1 passed the separate Codex/Windows Chrome and Claude/WSLg Chrome workflows shown above. Linux/macOS launchers and file pickers remain experimental. Earlier candidate checks include Mac Chrome and actual Safari 18.6; manual IME and native picker checks are recorded separately in the [environment-specific evidence](docs/SAFARI_150_INTEGRATION.md).
 
 ## Insert images
 
@@ -85,7 +102,8 @@ The inserted image stays selected. Use **Image size and alignment** for later ad
 ## Learn more and give feedback
 
 - [Full usage guide](docs/USAGE.md): text editing, document interaction, languages, recovery, updates and removal.
-- [AI workflow verification](docs/AI_WORKFLOW_VERIFICATION.md): screenshots, requests, output files and the limits of this check.
+- [1.5.1 joint-note workflow verification](docs/PUBLISHED_1.5.1_VERIFICATION.md): Codex and Claude screenshots, before/after files, checksums and test scope.
+- [Earlier single-element workflow](docs/AI_WORKFLOW_VERIFICATION.md): rename a heading, add an icon and remove a description.
 - [Development and verification history](docs/SKILLS_VERIFICATION.md) · [Review file format](docs/REVIEW_FORMAT.md).
 - [npm package](https://www.npmjs.com/package/@woody_s/htmledit) · [GitHub releases](https://github.com/ChiwooSong/htmledit/releases).
 - [Report an issue](https://github.com/ChiwooSong/htmledit/issues): include your OS, browser, package version and a minimal HTML example with private content removed.

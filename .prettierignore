@@ -7,3 +7,6 @@ public/examples
 docs/examples/ai-workflow-20261014/*.html
 docs/examples/change-requests/*.html
 package-lock.json
+
+# Preserve published live verification HTML exactly as downloaded/saved.
+docs/verification/1.5.1/*.html

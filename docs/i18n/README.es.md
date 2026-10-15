@@ -4,6 +4,23 @@
 
 Edita visualmente HTML creado por IA, deja notas en elementos concretos y pide a Claude Code o Codex que las aplique. HTMLEdit funciona localmente, sin cuenta ni clave de API de IA. La versión 1.4.0 añade la inserción de imágenes. Windows con Chrome/Edge sigue siendo el entorno principal. Linux/macOS son experimentales: las pruebas automáticas con Chrome pasaron en Ubuntu 24.04 WSL2 y macOS 15.6.1 Apple Silicon; el candidato 1.5.1 también pasó la edición en Safari 18.6 real y la aplicación de notas conjuntas con Claude. Las comprobaciones manuales de entrada coreana y las pruebas anteriores de selectores nativos se distinguen en el [registro por entorno](../SAFARI_150_INTEGRATION.md).
 
+## Una solicitud para varios elementos
+
+Una **nota conjunta** vincula una sola solicitud a varios elementos. Por ejemplo: «Intercambia la posición de estos dos títulos y conserva su texto».
+
+1. Selecciona el primer título y añade el segundo con **Ctrl+clic** (**Cmd+clic** en Mac).
+2. Pulsa **Añadir una nota a los elementos seleccionados**, escribe la solicitud y añade la nota. Ambos títulos muestran el mismo número.
+3. Pulsa **Guardar y copiar solicitud para IA** y pega el texto en Claude Code o Codex. El botón guarda primero el archivo; tú envías la solicitud en la conversación con la IA.
+4. La IA aplica la solicitud mediante el skill. En modo conectado, el editor se actualiza automáticamente si no hay cambios sin guardar. No necesitas buscar y abrir otro archivo de resultado.
+
+### Verificado con la versión publicada 1.5.1
+
+El orden **First → Second** cambió a **Second → First**. Los dos marcadores verdes **1** corresponden a la misma nota conjunta completada; los textos y el párrafo restante se conservaron.
+
+![HTMLEdit 1.5.1 después de que Codex intercambiara los títulos; ambos marcadores verdes indican la nota conjunta 1](https://raw.githubusercontent.com/ChiwooSong/htmledit/90426598ece364c2dc9f88ca8204646acd341d5f/docs/verification/1.5.1/codex-after.png)
+
+**Codex en Windows Chrome** y **Claude Code autenticado en Ubuntu WSLg Chrome** interpretaron y aplicaron la solicitud en ejecuciones independientes. Ambas pasaron la actualización automática, la conservación de destinos y del original, la comprobación exacta del respaldo y la exportación final. Las acciones del navegador fueron automatizadas; la intervención de ambas IA fue real. Consulta el [resultado de Claude](https://raw.githubusercontent.com/ChiwooSong/htmledit/90426598ece364c2dc9f88ca8204646acd341d5f/docs/verification/1.5.1/claude-after.png) y el [registro 1.5.1 con HTML anterior/posterior y alcance de las pruebas](../PUBLISHED_1.5.1_VERIFICATION.md).
+
 ## Instalar y abrir
 
 Necesitas Node.js **22.12+** y Claude Code o Codex ejecutándose en tu equipo. Ejecuta estos comandos fuera del repositorio del código fuente de HTMLEdit:

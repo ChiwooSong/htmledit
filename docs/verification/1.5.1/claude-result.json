@@ -1,0 +1,19 @@
+{
+  "platform": "linux",
+  "browser": "chrome",
+  "version": "1.5.1 published",
+  "multiSelectToggle": true,
+  "batchDeleteUndoRedo": true,
+  "jointNoteV2": true,
+  "jointTargetsPreserved": true,
+  "localePendingInput": true,
+  "saveCopy": true,
+  "reopen": true,
+  "actualClaude": true,
+  "automaticRefresh": true,
+  "originalPreserved": true,
+  "backupByteIdentical": true,
+  "cleanExport": true,
+  "scriptsBlocked": true,
+  "reviewSha256": "6b8c0c71757db1df72e03bca92fd05cec72dbe41810e5a8a07555c97dfdc6936"
+}
