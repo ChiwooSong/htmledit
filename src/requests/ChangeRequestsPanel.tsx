@@ -332,9 +332,11 @@ export default function ChangeRequestsPanel(props: Props) {
               busy || !!edit || (sourceEdit && (!source.trim() || source.length > SOURCE_LIMIT))
             }
             onClick={() => void run(analyze)}
+            aria-describedby="request-analysis-help"
           >
             {t('analyze')}
           </button>
+          <p id="request-analysis-help">{t('analyzeHelp')}</p>
           {batch && (
             <>
               <details>

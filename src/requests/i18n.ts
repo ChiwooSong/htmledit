@@ -13,6 +13,8 @@ const en = {
   limits:
     'UTF-8 TXT/MD or DOCX · 10 MB · 200,000 characters. DOCX body text only; no audio, PDF or DOC.',
   analyze: 'Save and copy analysis request',
+  analyzeHelp:
+    'Your requests are saved and copied. Paste them into your Claude Code or Codex conversation.',
   saveSource: 'Save source',
   cancel: 'Cancel',
   editSource: 'Edit source',
@@ -84,15 +86,16 @@ const ko: Record<Key, string> = {
   local: '변경 요청을 가져오려면 이 HTML을 로컬 연결 모드로 여세요.',
   intro:
     '지시 사항, 개인 메모, 피드백, 회의록을 붙여넣으세요. AI 제안을 검토한 뒤 메모로 추가합니다.',
-  newBatch: '새 요청 묶음',
-  batches: '요청 묶음',
+  newBatch: '새 요청 가져오기',
+  batches: '가져온 요청',
   name: '제목 (선택)',
   source: '변경 요청 원문',
   file: 'TXT·MD·DOCX 가져오기',
   limits:
     'UTF-8 TXT·MD 또는 DOCX · 10MB · 20만 자. DOCX 본문 텍스트만 추출하며 녹음·PDF·DOC는 제외합니다.',
-  analyze: '저장하고 분석 요청 복사',
-  saveSource: '원문 저장',
+  analyze: '분석 요청 복사',
+  analyzeHelp: '요청을 저장하고 복사합니다. Claude Code나 Codex 대화에 붙여넣으세요.',
+  saveSource: '임시 저장',
   cancel: '취소',
   editSource: '원문 수정',
   refresh: '새로고침',
@@ -123,7 +126,7 @@ const ko: Record<Key, string> = {
   bulk: '선택 항목 일괄 승인',
   commit: '승인한 항목을 메모로 추가',
   apply: '저장하고 AI 요청 복사',
-  delete: '요청 묶음 삭제',
+  delete: '가져온 요청 삭제',
   deleteWarning: '원문과 검토 기록을 삭제할까요? 이미 생성한 메모는 유지됩니다.',
   confirm: '삭제 확인',
   copied: '저장하고 요청을 복사했습니다.',
@@ -145,7 +148,7 @@ const ko: Record<Key, string> = {
   DOCX: '손상·암호화되었거나 지원하지 않는 DOCX입니다. UTF-8 TXT로 내보내세요.',
   TIMEOUT: '추출 시간이 10초를 초과했습니다. TXT로 내보내세요.',
   REQUEST_STALE: '문서 또는 원문이 변경되었습니다. 다시 분석하세요.',
-  REQUEST_REVISION: '요청 묶음이 변경되었습니다. 새로고침 후 검토하세요.',
+  REQUEST_REVISION: '가져온 요청이 변경되었습니다. 새로고침 후 검토하세요.',
   REQUEST_UNRESOLVED: '요청과 대상을 확정한 뒤 승인하세요.',
   REQUEST_CONVERTED: '이미 생성한 메모에서 수정하세요.',
   REQUEST_SOURCE: '20만 자 이내의 원문을 입력하세요.',
@@ -171,6 +174,8 @@ const es: Record<Key, string> = {
   limits:
     'TXT/MD UTF-8 o DOCX · 10 MB · 200.000 caracteres. Solo texto del cuerpo de DOCX; sin audio, PDF ni DOC.',
   analyze: 'Guardar y copiar solicitud de análisis',
+  analyzeHelp:
+    'Las solicitudes se guardan y copian. Péguelas en su conversación de Claude Code o Codex.',
   saveSource: 'Guardar original',
   cancel: 'Cancelar',
   editSource: 'Editar original',
@@ -249,6 +254,8 @@ const ja: Record<Key, string> = {
   file: 'TXT・MD・DOCXを取り込む',
   limits: 'UTF-8 TXT/MDまたはDOCX · 10MB · 20万文字。DOCX本文のみ。録音・PDF・DOCは対象外です。',
   analyze: '保存して分析依頼をコピー',
+  analyzeHelp:
+    'リクエストを保存してコピーします。Claude CodeまたはCodexとの会話に貼り付けてください。',
   saveSource: '原文を保存',
   cancel: 'キャンセル',
   editSource: '原文を編集',
@@ -326,6 +333,8 @@ const pt: Record<Key, string> = {
   limits:
     'TXT/MD UTF-8 ou DOCX · 10 MB · 200.000 caracteres. Apenas texto do corpo do DOCX; sem áudio, PDF ou DOC.',
   analyze: 'Salvar e copiar pedido de análise',
+  analyzeHelp:
+    'As solicitações são salvas e copiadas. Cole-as na sua conversa com Claude Code ou Codex.',
   saveSource: 'Salvar original',
   cancel: 'Cancelar',
   editSource: 'Editar original',

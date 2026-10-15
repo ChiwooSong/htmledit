@@ -38,7 +38,7 @@ test('import → AI proposals → user review → notes → undo/redo → scoped
     const source =
       '제목을 새 제목으로 바꿔.\n\n설명은 삭제. 아니, 유지할까?\n\n버튼 앞에 아이콘 추가.';
     await panel.getByLabel('변경 요청 원문', { exact: true }).fill(source);
-    await panel.getByRole('button', { name: '저장하고 분석 요청 복사', exact: true }).click();
+    await panel.getByRole('button', { name: '분석 요청 복사', exact: true }).click();
     await expect(panel.getByRole('status')).toContainText('복사했습니다');
     const b = (await requests.list())[0],
       check = await requests.checkout(b.id);
@@ -106,10 +106,10 @@ test('import → AI proposals → user review → notes → undo/redo → scoped
     );
     await page.getByRole('button', { name: /실행 취소/ }).click();
     // Saving undo removes converted notes; the stable IDs allow safe re-conversion.
-    await panel.getByRole('button', { name: '저장하고 분석 요청 복사' }).click();
+    await panel.getByRole('button', { name: '분석 요청 복사' }).click();
     await expect.poll(async () => readDocument((await store.read()).html).notes.length).toBe(0);
     await page.getByRole('button', { name: /다시 실행/ }).click();
-    await panel.getByRole('button', { name: '저장하고 분석 요청 복사' }).click();
+    await panel.getByRole('button', { name: '분석 요청 복사' }).click();
     await expect.poll(async () => readDocument((await store.read()).html).notes.length).toBe(2);
     await expect(
       panel.getByRole('button', { name: '저장하고 AI 요청 복사', exact: true }),
@@ -126,10 +126,10 @@ test('import → AI proposals → user review → notes → undo/redo → scoped
     await page.reload();
     await expect(frame.locator('h1')).toHaveText('원래 제목');
     await page.getByRole('button', { name: '변경 요청 가져오기', exact: true }).click();
-    await panel.getByLabel('요청 묶음', { exact: true }).selectOption(b.id);
+    await panel.getByLabel('가져온 요청', { exact: true }).selectOption(b.id);
     await expect(title).toContainText('메모로 추가됨');
     // New DOCX source goes through the bounded worker; markup remains literal text.
-    await panel.getByLabel('요청 묶음', { exact: true }).selectOption('');
+    await panel.getByLabel('가져온 요청', { exact: true }).selectOption('');
     const docx = zipSync({
       '[Content_Types].xml': strToU8('<Types/>'),
       'word/document.xml': strToU8(

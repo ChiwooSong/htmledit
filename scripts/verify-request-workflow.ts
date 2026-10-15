@@ -57,7 +57,7 @@ try {
     const source = `첫 화면 큰 제목은 '함께 만드는 변화'로 바꾸자.\n\n시작하기 버튼 앞에 작은 별 아이콘을 하나 넣어 줘.\n\n둘째 카드의 설명 문장은 빼자.\n\n두 카드 제목은 모두 글자를 조금 크게 해 줘.\n\n큰 제목은 아까 말한 '함께 만드는 변화'가 맞아. 같은 요청이야.\n\n첫째 카드 배경은 파란색이 좋아.\n\n아니, 첫째 카드 배경은 초록색으로 해야 해. 아직 결정 못 했어.\n\n저것도 좀 더 눈에 띄게 해 줘.\n\n오늘 커피가 맛있었네. 다음에 또 마시자.`;
     await panel.getByLabel('제목 (선택)').fill(`${agent} 자유 변경 요청`);
     await panel.getByRole('textbox', { name: '변경 요청 원문', exact: true }).fill(source);
-    await panel.getByRole('button', { name: '저장하고 분석 요청 복사', exact: true }).click();
+    await panel.getByRole('button', { name: '분석 요청 복사', exact: true }).click();
     await expect(panel.getByRole('status')).toContainText('복사했습니다');
     const batch = cli(['requests', 'status', '--file', file])[0];
     await writeFile(
@@ -84,7 +84,7 @@ try {
     await expect(page.frameLocator('iframe').locator('h1')).toHaveText('우리의 새 프로젝트');
     await page.getByRole('button', { name: '변경 요청 가져오기', exact: true }).click();
     const panel = page.getByRole('complementary', { name: '변경 요청 가져오기' });
-    await panel.getByLabel('요청 묶음', { exact: true }).selectOption(state.batchId);
+    await panel.getByLabel('가져온 요청', { exact: true }).selectOption(state.batchId);
     const batch = cli(['requests', 'status', '--file', state.file, '--batch', state.batchId]);
     const approved: string[] = [];
     for (const p of batch.analysis.proposals) {
