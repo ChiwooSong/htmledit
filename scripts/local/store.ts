@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, rename, realpath, lstat, unlink } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { parse, type DefaultTreeAdapterTypes as T } from 'parse5';
+import { replaceFile } from './replace-file';
 import {
   readDocument,
   exportDocument,
@@ -238,10 +239,11 @@ export class DocumentStore {
       const temp = join(dirname(this.file), `.${basename(this.file)}.${randomUUID()}.tmp`);
       try {
         await writeFile(temp, html, { flag: 'wx' });
-        await this.checkPath();
-        if ((await snapshot(this.file)).revision !== revision)
-          throw new LocalError('CONFLICT', message('theFileChangedReadItAgain'), 409);
-        await rename(temp, this.file);
+        await replaceFile(temp, this.file, async () => {
+          await this.checkPath();
+          if ((await snapshot(this.file)).revision !== revision)
+            throw new LocalError('CONFLICT', message('theFileChangedReadItAgain'), 409);
+        });
       } finally {
         await unlink(temp).catch(() => {});
       }
