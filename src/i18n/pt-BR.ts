@@ -1,5 +1,20 @@
 import type { Catalog } from './types';
 export default {
+  jointNoteHandoff:
+    'Este arquivo inclui notas conjuntas (review v2). Em cada nota com targets, leia todos os alvos como uma única solicitação conjunta. Preserve a lista completa de targets e marque done:true somente quando toda a solicitação for atendida.',
+  selectSingleElement: 'Selecione um elemento para editar seu texto, estilo ou imagem.',
+  selectedElementsCount: 'Elementos selecionados: {count}',
+  selectionShortcuts:
+    'Clique para selecionar · Ctrl/Cmd+clique para adicionar ou remover · Del para excluir · Ctrl/Cmd+Z para desfazer',
+  noteSelectionShortcuts:
+    'Selecione vários elementos com Ctrl/Cmd+clique para deixar uma única nota conjunta.',
+  multiSelectionHelp:
+    'Adicione uma nota conjunta ou exclua a seleção. Selecione um elemento para editar texto, estilo ou imagem.',
+  addGroupNote: 'Adicionar uma nota aos elementos selecionados',
+  deleteSelectedElements: 'Excluir elementos selecionados',
+  noteTargetsCount: 'Alvos: {count} · Ausentes: {missing}',
+  reviewFormatRequired:
+    'É necessário um arquivo de trabalho que preserve o formato de notas v1 ou v2.',
   pickerNeedsDesktop:
     'A seleção de arquivos exige uma sessão de desktop ativa no computador do servidor. Sem interface gráfica, abra o arquivo pela CLI com --no-browser.',
   pickerToolMissing:

@@ -109,3 +109,11 @@ Elige un archivo local PNG, JPEG, WebP o GIF, arrástralo al panel, pega una ima
 Configura el tamaño original (limitado al ancho disponible) o un ancho del 1 al 100% del contenedor, la alineación izquierda/centro/derecha y el texto alternativo. **Aplicar imagen** incluye los datos en el HTML y crea un paso de deshacer. La vista previa no modifica el archivo guardado ni el historial. El HTML completo, incluidas las imágenes, no puede superar 25MB. No se comprimen ni convierten los formatos.
 
 La imagen insertada queda seleccionada. Usa **Tamaño y alineación de imagen** para ajustarla después, o añade una nota para que la IA cambie la distribución. **Reemplazar imagen** utiliza las mismas entradas y conserva los estilos de distribución existentes. Aplica o cancela el panel antes de guardar y copiar la solicitud para la IA. Se mantienen checkout/apply y el formato review v1.
+
+## Selección múltiple y tecla Supr
+
+Haz clic para seleccionar un elemento. Ctrl+clic (Cmd+clic en Mac) añade o quita elementos. Cada destino muestra un borde. **Añadir una nota a los elementos seleccionados** crea una sola solicitud conjunta con el mismo número en todos los destinos. La lista permite visitar cada destino y muestra los ausentes. Reasignar sustituye los destinos por la selección actual.
+
+**Supr** elimina los elementos seleccionados sin confirmación. **Ctrl+Z / Cmd+Z** restaura toda la eliminación en un paso. Las notas se conservan. Este atajo no elimina elementos mientras escribes texto o notas, editas texto en línea, usas un diálogo o el modo Interactuar. No se puede eliminar el cuerpo del documento.
+
+La edición directa con selección múltiple permite eliminar en conjunto. Selecciona un elemento para editar texto, color, tamaño o imagen; no se incluye estilo masivo. Las notas de un solo destino siguen usando review v1; los archivos con notas conjuntas usan v2. Actualiza el editor y el runtime de IA antes de usarlas. Las versiones anteriores rechazan v2 para evitar perder destinos.

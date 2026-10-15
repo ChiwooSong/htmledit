@@ -1,4 +1,18 @@
 export const en = {
+  jointNoteHandoff:
+    'This file includes joint notes (review v2). For each note with targets, read every listed target as one joint request. Preserve the full targets list and mark done:true only when the entire request is fulfilled.',
+  selectSingleElement: 'Select one element to edit its text, style or image.',
+  selectedElementsCount: 'Selected elements: {count}',
+  selectionShortcuts:
+    'Click to select · Ctrl/Cmd+click to add or remove · Del to delete · Ctrl/Cmd+Z to undo',
+  noteSelectionShortcuts: 'Ctrl/Cmd+click several elements to leave one joint note.',
+  multiSelectionHelp:
+    'Leave one joint note or delete the selection. Select one element for text, style or image edits.',
+  addGroupNote: 'Add one note to selected elements',
+  deleteSelectedElements: 'Delete selected elements',
+  noteTargetsCount: 'Targets: {count} · Missing: {missing}',
+  reviewFormatRequired: 'A working file preserving review format v1 or v2 is required.',
+  appTitle: 'HTMLEdit · Edit visually, share notes',
   pickerNeedsDesktop:
     'File selection requires an active desktop session on the server computer. In a headless session, open the file with the CLI using --no-browser.',
   pickerToolMissing:
@@ -395,5 +409,4 @@ export const en = {
   imageApply: 'Apply image',
   imageEmbeddedHint:
     'PNG, JPEG, WebP or GIF · Up to 10MB per image. Embedded in HTML; total HTML limit: 25MB.',
-  appTitle: 'HTMLEdit · Edit visually, share notes',
 } as const;

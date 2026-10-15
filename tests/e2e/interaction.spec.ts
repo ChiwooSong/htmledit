@@ -160,7 +160,7 @@ test('조작 상태에서 삭제·실행 취소·첫 화면 초기화가 동작�
   await page.getByRole('button', { name: '직접 편집', exact: true }).click();
   await editable(page).locator('#s1 p').click();
   await page.getByRole('button', { name: '선택 요소 삭제', exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: '요소 삭제', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(editable(page).locator('#s1 p')).toHaveCount(0);
   await page.getByRole('button', { name: '실행 취소', exact: true }).click();
   await expect(editable(page).locator('#s1 p')).toHaveText('화면 설명 강조 끝');

@@ -1,5 +1,9 @@
 # Skills 검증 기록
 
+## 2026-10-15 — Multi-selection and immediate deletion (1.5.0)
+
+Implemented Ctrl/Cmd+click selection, immediate Delete with one-step undo, and one joint note linked to multiple elements. Review v1 remains supported; joint-note files use v2 to prevent older runtimes from silently dropping targets. See [behavior, environment, evidence and limits](MULTI_SELECTION_VERIFICATION.md). Build, 82 unit tests, 114 Windows Chrome/Edge regression cases, 16 final focused browser cases, built CLI checkout/apply and package lifecycle checks passed. A separate actual Codex request swapped two user-selected headings through checkout/apply, preserved the complete targets list, completed only the fulfilled note, and verified exact backup bytes and the rendered result. Native Linux/macOS/Safari use and actual Claude interpretation were not rerun. Version 1.5.0 uses the existing main CI → tag → trusted-publishing workflow; final publication receipts are recorded in its GitHub release.
+
 최신 홍보 예제 검증: [2026-10-14 공개 1.3.0 패키지의 Codex 메모 반영](AI_WORKFLOW_VERIFICATION.md). 화면에서 작성·저장한 요청 3개를 현재 Codex 세션이 해석하고 반영했으며 자동 갱신·백업·재열기·완성본을 검증했습니다. 기존 1.3.0 Claude 수동 승인 성공 결과도 파일 수준에서 재검사했습니다. 아래 기록은 각각 당시의 버전과 실행 환경을 기준으로 유지합니다.
 
 검증일: 2026-10-11. 개발 환경: Windows, Node.js 22.17, Chrome 및 Edge.

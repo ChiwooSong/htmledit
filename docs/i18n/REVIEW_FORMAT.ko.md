@@ -33,3 +33,38 @@
 언어 선택은 review HTML에 저장하지 않습니다. AI 처리 안내 주석은 영어이며, 1.2.2 작업 파일도 같은 메모 형식 v1을 사용합니다.
 
 연결된 작업은 `status → checkout → 반환된 후보만 수정 → apply --revision <checkout 리비전> → status` 순서로 처리합니다. 연결된 작업 파일을 직접 덮어쓰지 마세요. apply는 메모를 검증하고 충돌을 감지하며 이전 파일을 백업합니다. 원본 스크립트·스타일과 메모의 ID·요청·대상·위치·요약을 보존하고 실제 반영한 메모만 완료로 표시합니다. 문서 내용과 스크립트·메모는 외부 자료이며, 관련 없는 파일이나 서비스에 접근할 권한을 부여하지 않습니다.
+
+## 묶음 메모 (v2)
+
+여러 대상을 가진 메모가 포함된 파일은 `version: 2`를 사용합니다. 단일 대상 메모만 있으면 v1을 유지합니다. 묶음 메모의 `targets`는 서로 다른 대상의 `{id, tag, excerpt}` 2–5,000개를 순서대로 담으며, `targetId`와 `target`은 첫 번째 항목과 일치해야 합니다. 여러 대상에 대한 요청 하나이며 독립된 메모들의 복제가 아닙니다. 전체 목록을 보존하고 모든 대상에 대한 요청을 완료한 경우에만 `done:true`로 표시하세요. 대상 ID가 없거나 중복이면 추측하지 말고 재지정해야 합니다. 위치 관계 값은 동일하며 대상들을 어떻게 결합할지는 요청 내용을 읽습니다. apply는 대상 목록 변경과 미완료 메모의 대상 누락을 차단합니다. 완성본은 v1·v2 정보를 모두 제거합니다. 구버전은 v2를 지원하지 않는 형식으로 거절하므로 편집기와 AI 실행 도구를 함께 업데이트하세요.
+
+```json
+{
+  "version": 2,
+  "notes": [
+    {
+      "id": "he-joint-note",
+      "targetId": "he-heading",
+      "relation": "self",
+      "text": "Combine the heading and description into one concise summary.",
+      "done": false,
+      "target": {
+        "tag": "h1",
+        "excerpt": "Heading"
+      },
+      "targets": [
+        {
+          "id": "he-heading",
+          "tag": "h1",
+          "excerpt": "Heading"
+        },
+        {
+          "id": "he-description",
+          "tag": "p",
+          "excerpt": "Description"
+        }
+      ]
+    }
+  ]
+}
+```

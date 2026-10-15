@@ -39,7 +39,8 @@ import {
   addNote,
   changeStyle,
   changeText,
-  deleteElement,
+  deleteElements,
+  noteTargets,
   exportDocument,
   exportName,
   handoffMessage,
@@ -98,7 +99,9 @@ export default function App() {
   const session = history?.present ?? null;
   const sessionRef = useRef(session);
   sessionRef.current = session;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectedId = selectedIds.at(-1) ?? null;
+  const setSelectedId = useCallback((id: string | null) => setSelectedIds(id ? [id] : []), []);
   const [mode, setMode] = useState<Mode>('select');
   const [documentEpoch, setDocumentEpoch] = useState(0);
   const [tab, setTab] = useState<Tab>('edit');
@@ -134,6 +137,10 @@ export default function App() {
     setImagePreview(null);
   }, []);
   const startImage = (kind: ImageRequest['kind']) => {
+    if (selectedIds.length > 1) {
+      notify(message('selectSingleElement'), true);
+      return;
+    }
     if (!session || !selected) {
       notify(message('imageSelectTarget'), true);
       return;
@@ -154,11 +161,25 @@ export default function App() {
     [elements],
   );
   const selected = selectedId ? elementMap.get(selectedId) : undefined;
+  const multiple = selectedIds.length > 1;
+  const selectionSummary = selectedIds
+    .map((id) => {
+      const element = elementMap.get(id);
+      return element ? `〈${element.tag}〉 ${element.excerpt || t('elementWithoutText')}` : '';
+    })
+    .join('\n');
+  const canDelete =
+    selectedIds.length > 0 &&
+    selectedIds.every((id) => {
+      const element = elementMap.get(id);
+      return element && !['html', 'head', 'body'].includes(element.tag);
+    });
   const openCount = session?.notes.filter((note) => !note.done).length ?? 0;
   const dirty = session ? JSON.stringify(session) !== savedSignature.current : false;
   const handoffText = session
     ? connected
-      ? t('connectedHandoff', { file: connected.file })
+      ? t('connectedHandoff', { file: connected.file }) +
+        (session.notes.some((note) => note.targets) ? '\n' + t('jointNoteHandoff') : '')
       : handoffMessage(session, locale)
     : '';
   const pendingInput = useRef(false);
@@ -200,6 +221,20 @@ export default function App() {
     },
     [notify],
   );
+  const removeSelected = useCallback(() => {
+    if (
+      !canDelete ||
+      mode === 'interact' ||
+      modal ||
+      help ||
+      imageRequest ||
+      opening ||
+      reading ||
+      document.querySelector('[data-htmledit-inline-editor]')
+    )
+      return;
+    change((current) => deleteElements(current, selectedIds));
+  }, [canDelete, mode, modal, help, imageRequest, opening, reading, change, selectedIds]);
   useEffect(() => {
     if (token) return;
     loadDraft()
@@ -247,8 +282,10 @@ export default function App() {
     setTextEdits({});
   }, [selectedId, session?.html]);
   useEffect(() => {
-    if (selectedId && !elementMap.has(selectedId)) setSelectedId(null);
-  }, [elementMap, selectedId]);
+    setSelectedIds((ids) =>
+      ids.every((id) => elementMap.has(id)) ? ids : ids.filter((id) => elementMap.has(id)),
+    );
+  }, [elementMap]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
       if (dirty && !leavingRef.current) {
@@ -262,7 +299,27 @@ export default function App() {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target.matches('input,textarea,select') || target.isContentEditable) return;
+      if (
+        event.isComposing ||
+        modal ||
+        help ||
+        opening ||
+        imageRequest ||
+        target.closest('input,textarea,select,[contenteditable="true"]') ||
+        target.isContentEditable
+      )
+        return;
+      if (
+        event.key === 'Delete' &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.repeat
+      ) {
+        event.preventDefault();
+        removeSelected();
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         setHistory((h) => (h ? (event.shiftKey ? redo(h) : undo(h)) : h));
@@ -274,7 +331,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [removeSelected, modal, help, opening, imageRequest]);
   const openSession = (next: DocumentSession, recovered = false) => {
     setDocumentEpoch((value) => value + 1);
     sessionRef.current = next;
@@ -415,12 +472,19 @@ export default function App() {
       setReading(false);
     }
   };
-  const select = useCallback((id: string) => setSelectedId(id), []);
-  const selectNoteTarget = useCallback((id: string) => {
-    setSelectedId(id);
-    setTab('notes');
-    setTimeout(() => noteInput.current?.focus(), 0);
+  const select = useCallback((id: string, additive = false) => {
+    setSelectedIds((ids) =>
+      additive ? (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]) : [id],
+    );
   }, []);
+  const selectNoteTarget = useCallback(
+    (id: string, additive = false) => {
+      select(id, additive);
+      setTab('notes');
+      if (!additive) setTimeout(() => noteInput.current?.focus(), 0);
+    },
+    [select],
+  );
   const computed = useCallback(
     (style: { color: string; fontSize: string }) => {
       const previous = lastComputed.current;
@@ -442,7 +506,7 @@ export default function App() {
     const saved = change((current) =>
       editingNoteId
         ? updateNote(current, editingNoteId, { text: noteText, relation })
-        : addNote(current, selected!.id, relation, noteText),
+        : addNote(current, selectedIds, relation, noteText),
     );
     if (!saved) return;
     setNoteText('');
@@ -605,7 +669,14 @@ export default function App() {
     setJump({ id, nonce: Date.now() });
   };
   const marker = (noteId: string, targetId: string) => {
-    setSelectedId(targetId);
+    const note = session?.notes.find((note) => note.id === noteId);
+    setSelectedIds(
+      note
+        ? noteTargets(note)
+            .map((target) => target.id)
+            .filter((id) => elementMap.has(id))
+        : [targetId],
+    );
     setTab('notes');
     setFilter('all');
     requestAnimationFrame(() =>
@@ -613,15 +684,6 @@ export default function App() {
         .querySelector(`[data-note-id="${CSS.escape(noteId)}"]`)
         ?.scrollIntoView({ block: 'nearest' }),
     );
-  };
-  const removeSelected = () => {
-    if (!selected) return;
-    setModal({
-      title: message('deleteTheSelectedElement'),
-      message: message('deleteElementDetails', { tag: selected.tag, excerpt: selected.excerpt }),
-      action: message('deleteElement'),
-      run: () => change((current) => deleteElement(current, selected.id)),
-    });
   };
   const discardBadMetadata = () =>
     setModal({
@@ -987,16 +1049,18 @@ export default function App() {
               key={documentEpoch}
               session={imagePreview?.session ?? session}
               selectedId={imagePreview?.id ?? selectedId}
+              selectedIds={imagePreview ? [imagePreview.id] : selectedIds}
               insertion={imageRequest ? imagePreview?.position : undefined}
               mode={mode}
               width={width}
-              onSelect={(id) => {
+              onSelect={(id, additive) => {
                 if (imageRequest) {
                   if (!elementMap.has(id)) return;
                   closeImage();
                 }
-                select(id);
+                select(id, additive);
               }}
+              onDelete={removeSelected}
               onNoteTarget={selectNoteTarget}
               onMarker={marker}
               onHistory={(direction) =>
@@ -1012,8 +1076,8 @@ export default function App() {
                 {mode === 'interact'
                   ? t('useMenusAndTabsThenChooseEdit')
                   : mode === 'select'
-                    ? t('clickToSelectDoubleClickTextTo')
-                    : t('clickTheElementYouWantToAnnotate')}
+                    ? t('selectionShortcuts')
+                    : t('noteSelectionShortcuts')}
               </span>
               <span>
                 {width === 'desktop' ? t('desktop') : width === 'tablet' ? '768 px' : '390 px'}
@@ -1052,7 +1116,31 @@ export default function App() {
                 />
               ) : tab === 'edit' ? (
                 <>
-                  {selected ? (
+                  {multiple ? (
+                    <div className="selected-card">
+                      <strong>{t('selectedElementsCount', { count: selectedIds.length })}</strong>
+                      <p className="selection-summary">{selectionSummary}</p>
+                      <p className="field-hint">{t('multiSelectionHelp')}</p>
+                      <button
+                        className="button full-width"
+                        onClick={() => {
+                          setTab('notes');
+                          setMode('note');
+                          setTimeout(() => noteInput.current?.focus(), 0);
+                        }}
+                      >
+                        {t('addGroupNote')}
+                      </button>
+                      <button
+                        className="danger-button"
+                        disabled={!canDelete}
+                        onClick={removeSelected}
+                      >
+                        <Trash2 size={14} />
+                        {t('deleteSelectedElements')}
+                      </button>
+                    </div>
+                  ) : selected ? (
                     <>
                       <div className="section-caption">{t('selectedElement')}</div>
                       <div className="selected-card">
@@ -1187,7 +1275,7 @@ export default function App() {
                         </button>
                         <button
                           className="danger-button"
-                          disabled={selected.tag === 'body'}
+                          disabled={!canDelete}
                           onClick={removeSelected}
                         >
                           <Trash2 size={14} />
@@ -1258,9 +1346,10 @@ export default function App() {
                         className="button primary full-width"
                         disabled={!selected}
                         onClick={() => {
-                          change((current) => rebindNote(current, rebindId, selected!.id));
-                          setRebindId(null);
-                          notify(message('noteTargetReassigned'));
+                          if (change((current) => rebindNote(current, rebindId, selectedIds))) {
+                            setRebindId(null);
+                            notify(message('noteTargetReassigned'));
+                          }
                         }}
                       >
                         {t('connectToSelectedElement')}
@@ -1279,11 +1368,17 @@ export default function App() {
                       <span>
                         {editingNoteId
                           ? t('existingNoteTarget')
-                          : selected
-                            ? `〈${selected.tag}〉 ${selected.excerpt || t('selectedElement')}`
-                            : t('selectATargetInTheDocumentFirst')}
+                          : multiple
+                            ? t('selectedElementsCount', { count: selectedIds.length })
+                            : selected
+                              ? `〈${selected.tag}〉 ${selected.excerpt || t('selectedElement')}`
+                              : t('selectATargetInTheDocumentFirst')}
                       </span>
                     </div>
+                    {multiple && !editingNoteId && (
+                      <p className="selection-summary">{selectionSummary}</p>
+                    )}
+                    <p className="field-hint">{t('noteSelectionShortcuts')}</p>
                     <label className="field-label" htmlFor="note-relation">
                       {t('requestedPosition')}
                     </label>
@@ -1351,7 +1446,9 @@ export default function App() {
                           filter === 'all' || (filter === 'done' ? note.done : !note.done),
                       )
                       .map(({ note, index }) => {
-                        const exists = elementMap.has(note.targetId);
+                        const targets = noteTargets(note);
+                        const existing = targets.filter((target) => elementMap.has(target.id));
+                        const exists = existing.length === targets.length;
                         return (
                           <article
                             key={note.id}
@@ -1362,15 +1459,23 @@ export default function App() {
                             <div className="note-card-top">
                               <button
                                 className="note-number"
-                                disabled={!exists}
-                                onClick={() => jumpTo(note.targetId)}
+                                disabled={!existing.length}
+                                onClick={() => {
+                                  marker(note.id, existing[0].id);
+                                  setJump({ id: existing[0].id, nonce: Date.now() });
+                                }}
                               >
                                 {index + 1}
                               </button>
                               <span>
-                                {exists
-                                  ? `〈${note.target.tag}〉 ${format(RELATIONS[note.relation])}`
-                                  : t('targetMissing')}
+                                {targets.length > 1
+                                  ? t('noteTargetsCount', {
+                                      count: targets.length,
+                                      missing: targets.length - existing.length,
+                                    })
+                                  : exists
+                                    ? `〈${note.target.tag}〉 ${format(RELATIONS[note.relation])}`
+                                    : t('targetMissing')}
                               </span>
                               <button
                                 className="icon-button"
@@ -1394,6 +1499,23 @@ export default function App() {
                             <small className="target-excerpt">
                               {note.target.excerpt || note.target.tag}
                             </small>
+                            {targets.length > 1 && (
+                              <div className="note-target-list">
+                                {targets.map((target) => (
+                                  <button
+                                    key={target.id}
+                                    disabled={!elementMap.has(target.id)}
+                                    onClick={() => {
+                                      marker(note.id, target.id);
+                                      setJump({ id: target.id, nonce: Date.now() });
+                                    }}
+                                  >
+                                    〈{target.tag}〉 {target.excerpt || t('elementWithoutText')}
+                                    {!elementMap.has(target.id) && ` — ${t('targetMissing')}`}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             <div className="note-card-actions">
                               <button
                                 onClick={() =>

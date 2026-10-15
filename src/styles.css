@@ -1415,3 +1415,31 @@ svg {
 .image-insertion-outline span {
   background: #70409c;
 }
+
+.selection-summary {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.note-target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+.note-target-list button {
+  text-align: start;
+  font: inherit;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  background: transparent;
+  border: 1px solid #dce2d8;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+}
+.note-target-list button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

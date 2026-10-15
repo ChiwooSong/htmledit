@@ -9,6 +9,7 @@ import {
   walk,
   TARGET_ATTR,
   REVIEW_ID,
+  noteTargets,
 } from '../../src/model/document';
 
 export const LIMIT = 25 * 1024 * 1024;
@@ -74,7 +75,7 @@ export function validateReview(html: string, previous?: string) {
   });
   const session = readDocument(html);
   if (blocks !== 1 || session.metadataIssue)
-    throw new LocalError('METADATA', message('aWorkingFilePreservingReviewFormatV1'));
+    throw new LocalError('METADATA', message('reviewFormatRequired'));
   if (previous !== undefined) {
     const old = readDocument(previous);
     if (old.metadataIssue)
@@ -83,16 +84,13 @@ export function validateReview(html: string, previous?: string) {
       const next = session.notes.find((n) => n.id === note.id);
       if (
         !next ||
-        next.targetId !== note.targetId ||
+        JSON.stringify(noteTargets(next)) !== JSON.stringify(noteTargets(note)) ||
         next.text !== note.text ||
         next.relation !== note.relation
       )
         throw new LocalError('NOTE_CHANGED', message('aiChangesMustPreserveNoteIdsContent'));
-      if (!note.done && next.done && !ids.has(next.targetId)) {
-        // Completed deletion requests legitimately remove their targets.
-        continue;
-      }
-      if (!next.done && !ids.has(next.targetId))
+      // Completed deletion requests legitimately remove one or all targets.
+      if (!next.done && noteTargets(next).some((target) => !ids.has(target.id)))
         throw new LocalError('ORPHAN_NOTE', message('aPendingNoteHasNoTargetReassign'));
     }
   }
@@ -201,7 +199,17 @@ export class DocumentStore {
       file: value.file,
       revision: value.revision,
       metadataIssue: session.metadataIssue,
-      notes: session.notes.map((n) => ({ ...n, targetFound: counts.get(n.targetId) === 1 })),
+      notes: session.notes.map((n) => ({
+        ...n,
+        targetFound: noteTargets(n).every((target) => counts.get(target.id) === 1),
+        ...(n.targets
+          ? {
+              missingTargetIds: n.targets
+                .filter((target) => counts.get(target.id) !== 1)
+                .map((target) => target.id),
+            }
+          : {}),
+      })),
     };
   }
   async checkout() {

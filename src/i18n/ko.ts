@@ -1,5 +1,18 @@
 import type { Catalog } from './types';
 export default {
+  jointNoteHandoff:
+    '이 파일에는 묶음 메모(review v2)가 있습니다. targets가 있는 메모는 목록의 모든 대상을 함께 읽어 요청 하나로 처리하세요. 전체 targets 목록을 보존하고 요청 전체를 반영한 경우에만 done:true로 표시하세요.',
+  selectSingleElement: '문구·스타일·이미지를 편집하려면 요소 하나를 선택하세요.',
+  selectedElementsCount: '선택한 요소: {count}개',
+  selectionShortcuts:
+    '클릭으로 선택 · Ctrl/Cmd+클릭으로 추가·해제 · Del로 삭제 · Ctrl/Cmd+Z로 복원',
+  noteSelectionShortcuts: 'Ctrl/Cmd+클릭으로 여러 요소를 선택해 메모 하나를 남길 수 있습니다.',
+  multiSelectionHelp:
+    '선택한 요소에 메모 하나를 남기거나 함께 삭제할 수 있습니다. 문구·스타일·이미지 편집은 요소 하나를 선택하세요.',
+  addGroupNote: '선택한 요소에 메모 하나 남기기',
+  deleteSelectedElements: '선택한 요소 모두 삭제',
+  noteTargetsCount: '대상 {count}개 · 대상 없음 {missing}개',
+  reviewFormatRequired: '메모 형식 v1 또는 v2를 보존한 작업 파일이 필요합니다.',
   pickerNeedsDesktop:
     '파일을 선택하려면 서버 컴퓨터에 활성 데스크톱 세션이 필요합니다. 화면이 없는 환경에서는 CLI의 --no-browser 옵션으로 파일을 여세요.',
   pickerToolMissing:

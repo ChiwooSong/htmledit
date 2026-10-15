@@ -83,3 +83,11 @@ The inserted image stays selected. Use **Image size and alignment** for later ad
 To develop locally: `npm ci`, `npm run build`, then `npm start`. See the full guide for tests and development mode.
 
 [MIT License](LICENSE).
+
+## Multi-selection and Delete
+
+Click to select one element. Ctrl+click (Cmd+click on Mac) adds or removes elements from the selection. Multiple selections show a border around every target. Choose **Add one note to selected elements** to create one joint request; its number appears at each target. The note list lets you visit each target and shows missing targets. Reassigning a note replaces its targets with the current selection.
+
+Press **Del** to delete selected elements immediately, without confirmation. **Ctrl+Z / Cmd+Z** restores the entire deletion in one step. Deleting a target keeps its notes. Text fields, inline text editing, dialogs and Interact mode do not use this shortcut to delete document elements. The document body cannot be deleted.
+
+With multiple elements selected, direct editing offers batch deletion. Select one element to edit its text, color, size or image. Bulk styling is not included. Existing single-target files still use review v1; a file containing a joint note uses v2. Update the editor and AI runtime before using joint notes; older versions will reject v2 rather than lose targets.

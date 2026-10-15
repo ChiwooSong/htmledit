@@ -202,7 +202,7 @@ test('대상 삭제·실행 취소·메모 재지정이 연결을 유지한다',
   await note(page, '제목 요청');
   await page.getByRole('button', { name: '요소 편집', exact: true }).click();
   await page.getByRole('button', { name: '선택 요소 삭제', exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: '요소 삭제', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.frameLocator('iframe').locator('h1')).toHaveCount(0);
   await page.getByRole('button', { name: /수정 메모/ }).click();
   await expect(page.getByTestId('note-card')).toContainText('대상 없음');
@@ -525,7 +525,7 @@ test('상위 카드 선택과 문서 안의 실행 취소·다시 실행 단축�
   await page.getByRole('button', { name: '상위 요소 선택', exact: true }).click();
   await expect(page.locator('.tag-name')).toHaveText('article');
   await page.getByRole('button', { name: '선택 요소 삭제', exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: '요소 삭제', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(frame.locator('article')).toHaveCount(0);
   await frame.locator('h1').click();
   await frame.locator('h1').press('ControlOrMeta+z');

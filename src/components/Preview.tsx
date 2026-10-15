@@ -1,6 +1,6 @@
 import { useLocale } from '../i18n/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { previewHtml, TARGET_ATTR, type DocumentSession } from '../model/document';
+import { previewHtml, noteTargets, TARGET_ATTR, type DocumentSession } from '../model/document';
 import InteractivePreview from './InteractivePreview';
 import { applyViewState, type ViewState } from '../preview/interaction';
 
@@ -8,10 +8,12 @@ interface Props {
   insertion?: 'before' | 'after' | 'inside' | 'self';
   session: DocumentSession;
   selectedId: string | null;
+  selectedIds: string[];
   mode: 'select' | 'note' | 'interact';
   width: 'desktop' | 'tablet' | 'mobile';
-  onSelect: (id: string) => void;
-  onNoteTarget: (id: string) => void;
+  onSelect: (id: string, additive?: boolean) => void;
+  onNoteTarget: (id: string, additive?: boolean) => void;
+  onDelete: () => void;
   onMarker: (noteId: string, targetId: string) => void;
   onHistory: (direction: 'undo' | 'redo') => void;
   onTextCommit: (id: string, index: number, text: string) => void;
@@ -41,7 +43,7 @@ export default function Preview(props: Props) {
   latest.current = props;
   const cleanup = useRef<(() => void) | null>(null);
   const [ready, setReady] = useState(0);
-  const [selectionRect, setSelectionRect] = useState<Rect | null>(null);
+  const [selectionRects, setSelectionRects] = useState<(Rect & { id: string })[]>([]);
   const [markers, setMarkers] = useState<
     { id: string; targetId: string; number: number; rect: Rect; done: boolean }[]
   >([]);
@@ -94,27 +96,34 @@ export default function Preview(props: Props) {
       };
     };
     const selected = p.selectedId && getTarget(p.selectedId);
-    setSelectionRect(selected && selected.getClientRects().length ? rectOf(selected) : null);
+    setSelectionRects(
+      p.selectedIds.flatMap((id) => {
+        const element = getTarget(id);
+        return element?.getClientRects().length ? [{ ...rectOf(element), id }] : [];
+      }),
+    );
     if (selected) {
       const computed = frame.current.contentWindow!.getComputedStyle(selected);
       p.onComputedStyle({ color: computed.color, fontSize: computed.fontSize });
     }
     const positions = new Map<string, number>();
     setMarkers(
-      p.session.notes.flatMap((note, index) => {
-        const target = getTarget(note.targetId);
-        if (!target || !target.getClientRects().length) return [];
-        const n = positions.get(note.targetId) ?? 0;
-        positions.set(note.targetId, n + 1);
-        const rect = rectOf(target);
-        rect.left += n * 28;
-        return [{ id: note.id, targetId: note.targetId, number: index + 1, rect, done: note.done }];
-      }),
+      p.session.notes.flatMap((note, index) =>
+        noteTargets(note).flatMap(({ id }) => {
+          const target = getTarget(id);
+          if (!target || !target.getClientRects().length) return [];
+          const n = positions.get(id) ?? 0;
+          positions.set(id, n + 1);
+          const rect = rectOf(target);
+          rect.left += n * 28;
+          return [{ id: note.id, targetId: id, number: index + 1, rect, done: note.done }];
+        }),
+      ),
     );
   }, []);
   useEffect(() => {
     measure();
-  }, [props.selectedId, props.session.notes, props.width, ready, measure]);
+  }, [props.selectedId, props.selectedIds, props.session.notes, props.width, ready, measure]);
   useEffect(() => {
     // Scrolling alone does not change srcDoc, so onLoad will not run when the
     // interactive view hands the same document back to the editing frame.
@@ -164,12 +173,13 @@ export default function Preview(props: Props) {
       const element = target.closest?.(`[${TARGET_ATTR}]`);
       if (!element) return;
       const id = element.getAttribute(TARGET_ATTR)!;
-      if (latest.current.mode === 'note') latest.current.onNoteTarget(id);
-      else latest.current.onSelect(id);
+      const additive = event.ctrlKey || event.metaKey;
+      if (latest.current.mode === 'note') latest.current.onNoteTarget(id, additive);
+      else latest.current.onSelect(id, additive);
     };
     const dblclick = (event: MouseEvent) => {
       event.preventDefault();
-      if (latest.current.mode !== 'select') return;
+      if (latest.current.mode !== 'select' || event.ctrlKey || event.metaKey) return;
       // Edit one text node only. This preserves links, emphasis and all nested markup.
       const pointDoc = doc as Document & {
         caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node } | null;
@@ -212,6 +222,24 @@ export default function Preview(props: Props) {
     };
     const prevent = (event: Event) => event.preventDefault();
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        event.isComposing ||
+        editValue.current ||
+        target.closest?.('input,textarea,select,[contenteditable="true"]')
+      )
+        return;
+      if (
+        event.key === 'Delete' &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.repeat
+      ) {
+        event.preventDefault();
+        latest.current.onDelete();
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && ['z', 'y'].includes(event.key.toLowerCase())) {
         event.preventDefault();
         latest.current.onHistory(
@@ -302,8 +330,9 @@ export default function Preview(props: Props) {
           />
         )}
         <div className="overlay-layer" aria-hidden="true" hidden={interacting}>
-          {selectionRect && (
+          {selectionRects.map((selectionRect) => (
             <div
+              key={selectionRect.id}
               className={`selection-outline ${props.insertion ? 'image-insertion-outline' : ''}`}
               style={
                 props.insertion && props.insertion !== 'self'
@@ -319,7 +348,7 @@ export default function Preview(props: Props) {
             >
               <span>{t(props.insertion ? 'imagePreview' : 'selected')}</span>
             </div>
-          )}
+          ))}
         </div>
         <div className="marker-layer" hidden={interacting}>
           {markers
@@ -330,7 +359,7 @@ export default function Preview(props: Props) {
             .map((marker) => (
               <button
                 className={`note-marker ${marker.done ? 'done' : ''}`}
-                key={marker.id}
+                key={`${marker.id}:${marker.targetId}`}
                 style={{
                   left: Math.max(0, marker.rect.left - 9),
                   top: Math.max(2, marker.rect.top - 10),

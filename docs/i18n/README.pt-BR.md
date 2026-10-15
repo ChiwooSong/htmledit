@@ -109,3 +109,11 @@ Escolha um arquivo local PNG, JPEG, WebP ou GIF, arraste-o para o painel, cole u
 Defina o tamanho original (limitado à largura disponível) ou 1–100% da largura da área, alinhamento à esquerda/centro/direita e texto alternativo. **Aplicar imagem** inclui os dados no HTML e cria uma etapa de desfazer. A prévia não altera o arquivo salvo nem o histórico. O HTML completo, incluindo as imagens, deve ter até 25MB. Não há compressão nem conversão automática de formato.
 
 A imagem inserida permanece selecionada. Use **Tamanho e alinhamento da imagem** para ajustes posteriores ou adicione uma nota pedindo alterações de layout à IA. **Substituir imagem** usa as mesmas entradas e preserva os estilos de layout existentes. Aplique ou cancele o painel antes de salvar e copiar o pedido para a IA. O fluxo checkout/apply e o formato review v1 permanecem iguais.
+
+## Seleção múltipla e tecla Del
+
+Clique para selecionar um elemento. Ctrl+clique (Cmd+clique no Mac) adiciona ou remove elementos. Cada alvo recebe uma borda. **Adicionar uma nota aos elementos selecionados** cria uma única solicitação conjunta, com o mesmo número em todos os alvos. A lista permite visitar cada alvo e mostra os ausentes. Reatribuir substitui os alvos pela seleção atual.
+
+**Del** exclui os elementos selecionados sem confirmação. **Ctrl+Z / Cmd+Z** restaura toda a exclusão em uma etapa. As notas são mantidas. Esse atalho não exclui elementos durante a digitação de textos ou notas, a edição de texto na página, o uso de diálogos ou o modo Interagir. O corpo inteiro do documento não pode ser excluído.
+
+Na edição direta, a seleção múltipla oferece exclusão em lote. Selecione um elemento para editar texto, cor, tamanho ou imagem; estilos em lote não estão incluídos. Notas com um alvo continuam em review v1; arquivos com notas conjuntas usam v2. Atualize o editor e o runtime de IA antes de usá-las. Versões anteriores rejeitam v2 para evitar a perda de alvos.

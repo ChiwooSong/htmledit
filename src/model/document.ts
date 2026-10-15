@@ -18,6 +18,11 @@ export const RELATIONS = {
   inside: message('inside'),
 } as const;
 export type Relation = keyof typeof RELATIONS;
+export interface NoteTarget {
+  id: string;
+  tag: string;
+  excerpt: string;
+}
 export interface Note {
   id: string;
   targetId: string;
@@ -25,7 +30,10 @@ export interface Note {
   text: string;
   done: boolean;
   target: { tag: string; excerpt: string };
+  targets?: NoteTarget[];
 }
+export const noteTargets = (note: Note): NoteTarget[] =>
+  note.targets ?? [{ id: note.targetId, ...note.target }];
 export interface DocumentSession {
   html: string;
   fileName: string;
@@ -156,6 +164,31 @@ export function validateNotes(value: unknown): Note[] {
     )
       throw new MessageError(message('invalidNoteContentOrIdentifier'));
     ids.add(item.id);
+    let targets: NoteTarget[] | undefined;
+    if (item.targets !== undefined) {
+      if (
+        !Array.isArray(item.targets) ||
+        item.targets.length < 2 ||
+        item.targets.length > 5000 ||
+        item.targets.some(
+          (target: NoteTarget) =>
+            !target ||
+            !isId(target.id) ||
+            typeof target.tag !== 'string' ||
+            typeof target.excerpt !== 'string',
+        ) ||
+        new Set(item.targets.map((target: NoteTarget) => target.id)).size !== item.targets.length ||
+        item.targets[0].id !== item.targetId ||
+        item.targets[0].tag !== item.target.tag ||
+        item.targets[0].excerpt !== item.target.excerpt
+      )
+        throw new MessageError(message('invalidNoteContentOrIdentifier'));
+      targets = item.targets.map((target: NoteTarget) => ({
+        id: target.id,
+        tag: target.tag.slice(0, 100),
+        excerpt: target.excerpt.slice(0, 200),
+      }));
+    }
     return {
       id: item.id,
       targetId: item.targetId,
@@ -163,6 +196,7 @@ export function validateNotes(value: unknown): Note[] {
       text: item.text,
       done: item.done,
       target: { tag: item.target.tag.slice(0, 100), excerpt: item.target.excerpt.slice(0, 200) },
+      ...(targets ? { targets } : {}),
     };
   });
 }
@@ -174,7 +208,7 @@ function stripToolData(root: T.Node) {
       if (node.tagName === 'script' && attr(node, 'id') === REVIEW_ID) remove(node);
     } else if (
       node.nodeName === '#comment' &&
-      (node as T.CommentNode).data.trimStart().startsWith('HTMLEdit AI HANDOFF v1')
+      /^HTMLEdit AI HANDOFF v[12]\b/.test((node as T.CommentNode).data.trimStart())
     )
       remove(node as T.CommentNode);
   });
@@ -195,8 +229,11 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
       if (attr(blocks[0], 'type') !== 'application/json')
         throw new MessageError(message('invalidReviewMetadataBlockFormat'));
       const payload = JSON.parse(rawText(blocks[0]));
-      if (payload?.version !== 1) throw new MessageError(message('unsupportedReviewFormatVersion'));
+      if (![1, 2].includes(payload?.version))
+        throw new MessageError(message('unsupportedReviewFormatVersion'));
       notes = validateNotes(payload.notes);
+      if (payload.version === 1 && notes.some((note) => note.targets))
+        throw new MessageError(message('unsupportedReviewFormatVersion'));
     } catch (error) {
       metadataIssue =
         error instanceof Error ? describeError(error) : message('couldNotReadTheNotes');
@@ -206,7 +243,7 @@ export function readDocument(source: string, fileName = 'document.html'): Docume
   walk(root, (node) => {
     if (
       node.nodeName === '#comment' &&
-      (node as T.CommentNode).data.trimStart().startsWith('HTMLEdit AI HANDOFF v1')
+      /^HTMLEdit AI HANDOFF v[12]\b/.test((node as T.CommentNode).data.trimStart())
     )
       remove(node as T.CommentNode);
   });
@@ -553,15 +590,33 @@ export function insertImage(
   return { session: next, id };
 }
 export function deleteElement(session: DocumentSession, id: string) {
-  return mutate(session, id, (node) => {
+  return deleteElements(session, [id]);
+}
+export function deleteElements(session: DocumentSession, ids: string[]): DocumentSession {
+  if (!ids.length) return session;
+  const root = parse(session.html);
+  const nodes = [...new Set(ids)].map((id) => {
+    const node = find(root, id);
+    if (!node) throw new MessageError(message('couldNotFindTheSelectedElement'));
     if (['html', 'body', 'head'].includes(node.tagName))
       throw new MessageError(message('youCannotDeleteTheEntireDocument'));
-    remove(node);
+    return node;
   });
+  // Validate the entire selection first; parent/child selections form one edit.
+  nodes.forEach(remove);
+  return { ...session, html: serialize(root) };
+}
+function describeTargets(session: DocumentSession, selection: string | string[]) {
+  const ids = [...new Set(typeof selection === 'string' ? [selection] : selection)];
+  if (!ids.length || ids.length > 5000)
+    throw new MessageError(message('invalidNoteContentOrIdentifier'));
+  const targets = ids.map((id) => ({ id, ...describeTarget(session, id) }));
+  const { id: targetId, ...target } = targets[0];
+  return { targetId, target, ...(targets.length > 1 ? { targets } : {}) };
 }
 export function addNote(
   session: DocumentSession,
-  targetId: string,
+  targetId: string | string[],
   relation: Relation,
   content: string,
 ): DocumentSession {
@@ -570,11 +625,10 @@ export function addNote(
     throw new MessageError(message('enterARequestBetween1And20'));
   const note: Note = {
     id: newId(),
-    targetId,
+    ...describeTargets(session, targetId),
     relation,
     text: content.trim(),
     done: false,
-    target: describeTarget(session, targetId),
   };
   return { ...session, notes: [...session.notes, note] };
 }
@@ -595,12 +649,16 @@ export function updateNote(
 export function rebindNote(
   session: DocumentSession,
   noteId: string,
-  targetId: string,
+  targetId: string | string[],
 ): DocumentSession {
-  const target = describeTarget(session, targetId);
+  const targets = describeTargets(session, targetId);
   return {
     ...session,
-    notes: session.notes.map((note) => (note.id === noteId ? { ...note, targetId, target } : note)),
+    notes: session.notes.map((note) => {
+      if (note.id !== noteId) return note;
+      const { targets: _previous, ...rest } = note;
+      return { ...rest, ...targets };
+    }),
   };
 }
 export function exportDocument(session: DocumentSession, kind: 'review' | 'clean'): string {
@@ -624,7 +682,8 @@ export function exportDocument(session: DocumentSession, kind: 'review' | 'clean
     .forEach((node) => setAttr(node, 'content', 'text/html; charset=utf-8'));
   if (kind === 'clean') stripToolData(root);
   else {
-    const payload = JSON.stringify({ version: 1, notes: session.notes })
+    const version = session.notes.some((note) => note.targets) ? 2 : 1;
+    const payload = JSON.stringify({ version, notes: session.notes })
       .replace(/</g, '\\u003c')
       .replace(/>/g, '\\u003e')
       .replace(/&/g, '\\u0026');
@@ -635,7 +694,7 @@ export function exportDocument(session: DocumentSession, kind: 'review' | 'clean
     append(head(root), {
       nodeName: '#comment',
       parentNode: null,
-      data: ` HTMLEdit AI HANDOFF v1\nRead version:1 and notes in script#${REVIEW_ID}. Apply only done:false requests.\nMatch targetId to [${TARGET_ATTR}="ID"]. Relations: self, before, after, inside.\nPreserve the design, scripts, styles, identifiers and other notes. Mark only fulfilled notes done:true.\nIf targets are missing or duplicated, ask the user instead of guessing from excerpts.\nUse the editor to export final HTML without review metadata. `,
+      data: ` HTMLEdit AI HANDOFF v${version}\nRead version:${version} and notes in script#${REVIEW_ID}. Apply only done:false requests.\nMatch targetId to [${TARGET_ATTR}="ID"]. When targets is present, it lists ALL targets for ONE joint request; targetId/target mirror its first entry. Preserve the entire ordered targets list. Mark done:true only when the request is fulfilled for the whole group. Relations: self, before, after, inside.\nPreserve the design, scripts, styles, identifiers and other notes. Mark only fulfilled notes done:true.\nIf targets are missing or duplicated, ask the user instead of guessing from excerpts.\nUse the editor to export final HTML without review metadata. `,
     });
   }
   return serialize(root);
@@ -688,5 +747,8 @@ export function previewHtml(session: DocumentSession, bridgeScript?: string): st
 }
 
 export function handoffMessage(session: DocumentSession, locale: Locale = 'en') {
-  return translate(locale, 'fileHandoff', { file: exportName(session.fileName, 'review') });
+  return (
+    translate(locale, 'fileHandoff', { file: exportName(session.fileName, 'review') }) +
+    (session.notes.some((note) => note.targets) ? '\n' + translate(locale, 'jointNoteHandoff') : '')
+  );
 }

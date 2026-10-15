@@ -1,5 +1,18 @@
 import type { Catalog } from './types';
 export default {
+  jointNoteHandoff:
+    'このファイルには複数対象のメモ（review v2）があります。targetsがあるメモでは、一覧の全対象を1つの依頼として読んでください。targets全体を保持し、依頼全体を完了した場合のみdone:trueにしてください。',
+  selectSingleElement: 'テキスト・スタイル・画像を編集するには、要素を1つ選択してください。',
+  selectedElementsCount: '選択した要素：{count}個',
+  selectionShortcuts:
+    'クリックで選択 · Ctrl/Cmd+クリックで追加・解除 · Delで削除 · Ctrl/Cmd+Zで元に戻す',
+  noteSelectionShortcuts: 'Ctrl/Cmd+クリックで複数の要素を選択し、まとめて1つのメモを残せます。',
+  multiSelectionHelp:
+    '選択した要素にまとめてメモを残すか、一括削除できます。テキスト・スタイル・画像を編集するには要素を1つ選択してください。',
+  addGroupNote: '選択した要素に1つのメモを追加',
+  deleteSelectedElements: '選択した要素をすべて削除',
+  noteTargetsCount: '対象：{count}個 · 対象なし：{missing}個',
+  reviewFormatRequired: 'メモ形式v1またはv2を保持した作業ファイルが必要です。',
   pickerNeedsDesktop:
     'ファイル選択にはサーバー側のコンピューターで有効なデスクトップセッションが必要です。画面のない環境では、CLIの --no-browser オプションでファイルを開いてください。',
   pickerToolMissing:
