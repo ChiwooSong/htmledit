@@ -1,5 +1,7 @@
 # Skills 검증 기록
 
+Published 1.5.1 follow-up (2026-10-15): [actual Codex and Claude joint-note application, automatic refresh and final export](PUBLISHED_1.5.1_VERIFICATION.md) passed in Windows Chrome and WSLg Chrome. This checks the public npm package after installation, separately from the candidate results below.
+
 1.5.0 integration (2026-10-15): [Safari fixes, multi-selection, batch deletion and joint-note regression results](SAFARI_150_INTEGRATION.md). Windows Chrome/Edge passed 132 cases; Ubuntu and Mac Chrome passed 66 each; all three OS unit suites passed 86 tests. Actual Claude joint-note checkout/apply, target preservation, backup and automatic refresh passed in WSLg Chrome, Mac Chrome and actual Safari. These results describe the 1.5.0-based test candidate. The user subsequently approved release 1.5.1; see [the release record](RELEASE_1.5.1.md) for publication verification.
 
 ## 2026-10-15 — Multi-selection and immediate deletion (1.5.0)

@@ -1,0 +1,19 @@
+{
+  "platform": "win32",
+  "browser": "chrome",
+  "version": "1.5.1 published",
+  "multiSelectToggle": true,
+  "batchDeleteUndoRedo": true,
+  "jointNoteV2": true,
+  "jointTargetsPreserved": true,
+  "localePendingInput": true,
+  "saveCopy": true,
+  "reopen": true,
+  "actualCodex": true,
+  "automaticRefresh": true,
+  "originalPreserved": true,
+  "backupByteIdentical": true,
+  "cleanExport": true,
+  "scriptsBlocked": true,
+  "reviewSha256": "eba2417c9e80a134b2d87fe97bf0843b6d93fe27e0301b1281bd6fa062043c9f"
+}

@@ -3,3 +3,6 @@
 *.jpg binary
 *.jpeg binary
 *.gif binary
+
+# Verification HTML hashes describe the original captured bytes.
+docs/verification/1.5.1/*.html -text

@@ -6,3 +6,6 @@ public/examples
 # Captured verification artifacts: preserve the bytes recorded in verification.json.
 docs/examples/ai-workflow-20261014/*.html
 package-lock.json
+
+# Preserve published live verification HTML exactly as downloaded/saved.
+docs/verification/1.5.1/*.html
