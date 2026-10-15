@@ -1,0 +1,124 @@
+.workspace.requests-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
+}
+.request-panel {
+  min-width: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 20px;
+  border-left: 1px solid #dce0d7;
+  background: #fafbf7;
+  color: #26332b;
+}
+.request-panel header,
+.request-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.request-panel header {
+  justify-content: space-between;
+}
+.request-panel h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.request-panel p {
+  line-height: 1.6;
+  font-size: 13px;
+}
+.request-panel label {
+  display: block;
+  font-size: 13px;
+  margin: 10px 0;
+}
+.request-panel input:not([type='checkbox']),
+.request-panel textarea,
+.request-panel select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px;
+  border: 1px solid #bfc8be;
+  border-radius: 6px;
+  background: white;
+  color: #26332b;
+  font: inherit;
+}
+.request-panel textarea {
+  resize: vertical;
+}
+.request-panel button {
+  border: 1px solid #bfc8be;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: white;
+  color: #26332b;
+  cursor: pointer;
+  font-size: 12px;
+}
+.request-panel button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.request-panel .primary {
+  background: #344c38;
+  color: white;
+  margin: 10px 0;
+}
+.request-panel fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.request-card {
+  padding: 14px;
+  margin: 14px 0;
+  background: white;
+  border: 1px solid #d7dfd2;
+  border-radius: 10px;
+}
+.request-source,
+.request-targets,
+.request-panel blockquote {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.request-panel blockquote {
+  margin: 8px 0;
+  padding-left: 10px;
+  border-left: 3px solid #bfc8be;
+}
+.request-warning {
+  background: #fff0cf;
+  color: #694619;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+}
+.request-panel summary {
+  cursor: pointer;
+  font-size: 13px;
+  margin: 10px 0;
+}
+.request-panel small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.request-transaction {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #ffffff80;
+  display: grid;
+  place-items: center;
+  cursor: wait;
+}
+@media (max-width: 900px) {
+  .workspace.requests-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 46vw);
+  }
+}

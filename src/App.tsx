@@ -34,6 +34,9 @@ import {
 } from 'lucide-react';
 import Preview from './components/Preview';
 import ImagePanel, { type ImageRequest, type ImagePreview } from './components/ImagePanel';
+import ChangeRequestsPanel, { type CommitResult } from './requests/ChangeRequestsPanel';
+import { requestText } from './requests/i18n';
+import type { BatchView } from './requests/types';
 import { exampleHtml } from './example';
 import {
   addNote,
@@ -129,6 +132,12 @@ export default function App() {
   } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [help, setHelp] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [requestBusy, setRequestBusy] = useState(false);
+  const requestDraft = useRef(false);
+  const onRequestDraft = useCallback((dirty: boolean) => {
+    requestDraft.current = dirty;
+  }, []);
   const [reading, setReading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const [imageRequest, setImageRequest] = useState<ImageRequest | null>(null);
@@ -305,7 +314,9 @@ export default function App() {
         modal ||
         help ||
         opening ||
+        requestBusy ||
         imageRequest ||
+        target.closest('.request-panel') ||
         target.closest('input,textarea,select,[contenteditable="true"]') ||
         target.isContentEditable
       )
@@ -332,7 +343,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [removeSelected, modal, help, opening, imageRequest]);
+  }, [removeSelected, modal, help, opening, imageRequest, requestBusy]);
   const openSession = (next: DocumentSession, recovered = false) => {
     setDocumentEpoch((value) => value + 1);
     sessionRef.current = next;
@@ -396,6 +407,7 @@ export default function App() {
           );
           if (
             pendingInput.current ||
+            requestDraft.current ||
             inlineEditing ||
             JSON.stringify(sessionRef.current) !== savedSignature.current
           ) {
@@ -408,6 +420,7 @@ export default function App() {
               !savingRef.current &&
               !openingRef.current &&
               !pendingInput.current &&
+              !requestDraft.current &&
               JSON.stringify(sessionRef.current) === savedSignature.current
             )
               acceptLocalRef.current(value);
@@ -556,6 +569,48 @@ export default function App() {
       setSaving(false);
     }
   };
+  const prepareRequests = async (): Promise<LocalDocument> => {
+    if (
+      !token ||
+      !connectedRef.current ||
+      conflict ||
+      savingRef.current ||
+      openingRef.current ||
+      pendingInput.current ||
+      document.querySelector('[data-htmledit-inline-editor]')
+    )
+      throw new Error('unsaved');
+    const signature = JSON.stringify(sessionRef.current);
+    if (!(await save('review')) || JSON.stringify(sessionRef.current) !== signature)
+      throw new Error('unsaved');
+    return connectedRef.current!;
+  };
+  const commitRequests = async (batch: BatchView): Promise<CommitResult> => {
+    setRequestBusy(true);
+    try {
+      const doc = await prepareRequests();
+      savingRef.current = true;
+      const result = await localRequest<CommitResult>(
+        token!,
+        `change-requests/${batch.id}/commit`,
+        'POST',
+        {
+          revision: batch.revision,
+          documentRevision: doc.revision,
+        },
+      );
+      const next = readDocument(result.document.html, result.document.fileName);
+      change(() => next);
+      connectedRef.current = result.document;
+      setConnected(result.document);
+      savedSignature.current = JSON.stringify(next);
+      setConflict(false);
+      return result;
+    } finally {
+      savingRef.current = false;
+      setRequestBusy(false);
+    }
+  };
   const chooseLocalDocument = async (saveFirst: boolean) => {
     if (!token || openingRef.current || savingRef.current) return;
     openingRef.current = true;
@@ -603,6 +658,10 @@ export default function App() {
     }
   };
   const openAnotherDocument = () => {
+    if (requestDraft.current) {
+      notify(requestText(locale, 'unsaved'), true);
+      return;
+    }
     if (!token) {
       fileInput.current?.click();
       return;
@@ -700,10 +759,10 @@ export default function App() {
   return (
     <div
       className="app"
-      inert={opening}
+      inert={opening || requestBusy}
       onDragOver={(event) => {
         event.preventDefault();
-        if (imageRequest) return;
+        if (imageRequest || requestsOpen) return;
         if (event.dataTransfer.types.includes('Files')) setDragOver(true);
       }}
       onDragLeave={(event) => {
@@ -712,6 +771,10 @@ export default function App() {
       onDrop={(event) => {
         event.preventDefault();
         setDragOver(false);
+        if (requestsOpen) {
+          notify(requestText(locale, 'unsaved'), true);
+          return;
+        }
         const files = event.dataTransfer.files;
         if (files.length !== 1) notify(message('dropOneHtmlFile'), true);
         else void openFile(files[0]);
@@ -749,6 +812,16 @@ export default function App() {
         </button>
       </header>
       <div className="toolbar">
+        <button
+          className="button"
+          disabled={!session || requestBusy}
+          onClick={() => {
+            setRequestsOpen(true);
+            setMode('select');
+          }}
+        >
+          {requestText(locale, 'title')}
+        </button>
         <button
           className="button"
           onClick={openAnotherDocument}
@@ -994,7 +1067,7 @@ export default function App() {
           </div>
         </main>
       ) : (
-        <main className="workspace">
+        <main className={`workspace${requestsOpen ? ' requests-workspace' : ''}`}>
           <section className="document-pane">
             <div className="document-bar">
               <div className="document-name">
@@ -1088,184 +1161,61 @@ export default function App() {
               </span>
             </div>
           </section>
-          <aside className="sidebar">
-            <div className="sidebar-tabs">
-              <button className={tab === 'edit' ? 'active' : ''} onClick={() => setTab('edit')}>
-                {t('elementEditor')}
-              </button>
-              <button className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
-                {t('reviewNotes')}
-                <span>{session.notes.length}</span>
-              </button>
-            </div>
-            <div className="sidebar-scroll">
-              {imageRequest ? (
-                <ImagePanel
-                  key={imageRequest.targetId + imageRequest.kind}
-                  request={imageRequest}
-                  onPreview={setImagePreview}
-                  onCancel={closeImage}
-                  onApply={(next, id) => {
-                    if (sessionRef.current !== imageRequest.base) {
-                      closeImage();
-                      notify(message('theDocumentChangedSelectTheImageAgain'), true);
-                      return;
-                    }
-                    if (change(() => next)) {
-                      closeImage();
-                      setSelectedId(id);
-                      setJump({ id, nonce: Date.now() });
-                    }
-                  }}
-                />
-              ) : tab === 'edit' ? (
-                <>
-                  {multiple ? (
-                    <div className="selected-card">
-                      <strong>{t('selectedElementsCount', { count: selectedIds.length })}</strong>
-                      <p className="selection-summary">{selectionSummary}</p>
-                      <p className="field-hint">{t('multiSelectionHelp')}</p>
-                      <button
-                        className="button full-width"
-                        onClick={() => {
-                          setTab('notes');
-                          setMode('note');
-                          setTimeout(() => noteInput.current?.focus(), 0);
-                        }}
-                      >
-                        {t('addGroupNote')}
-                      </button>
-                      <button
-                        className="danger-button"
-                        disabled={!canDelete}
-                        onClick={removeSelected}
-                      >
-                        <Trash2 size={14} />
-                        {t('deleteSelectedElements')}
-                      </button>
-                    </div>
-                  ) : selected ? (
-                    <>
-                      <div className="section-caption">{t('selectedElement')}</div>
+          {requestsOpen ? (
+            <ChangeRequestsPanel
+              key={connected?.file ?? 'download'}
+              token={token}
+              file={connected?.file}
+              elements={elements}
+              selectedIds={selectedIds}
+              onClose={() => setRequestsOpen(false)}
+              onDraftChange={onRequestDraft}
+              prepare={prepareRequests}
+              onCommit={commitRequests}
+              onFocus={(ids) => {
+                setSelectedIds(ids);
+                setMode('select');
+                if (ids[0]) setJump({ id: ids[0], nonce: Date.now() });
+              }}
+            />
+          ) : (
+            <aside className="sidebar">
+              <div className="sidebar-tabs">
+                <button className={tab === 'edit' ? 'active' : ''} onClick={() => setTab('edit')}>
+                  {t('elementEditor')}
+                </button>
+                <button className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
+                  {t('reviewNotes')}
+                  <span>{session.notes.length}</span>
+                </button>
+              </div>
+              <div className="sidebar-scroll">
+                {imageRequest ? (
+                  <ImagePanel
+                    key={imageRequest.targetId + imageRequest.kind}
+                    request={imageRequest}
+                    onPreview={setImagePreview}
+                    onCancel={closeImage}
+                    onApply={(next, id) => {
+                      if (sessionRef.current !== imageRequest.base) {
+                        closeImage();
+                        notify(message('theDocumentChangedSelectTheImageAgain'), true);
+                        return;
+                      }
+                      if (change(() => next)) {
+                        closeImage();
+                        setSelectedId(id);
+                        setJump({ id, nonce: Date.now() });
+                      }
+                    }}
+                  />
+                ) : tab === 'edit' ? (
+                  <>
+                    {multiple ? (
                       <div className="selected-card">
-                        <span className="tag-name">{selected.tag}</span>
-                        <p>{selected.excerpt || t('elementWithoutText')}</p>
-                        <button
-                          className="text-button"
-                          disabled={!selected.parentId}
-                          onClick={() => selected.parentId && jumpTo(selected.parentId)}
-                        >
-                          <ArrowUp size={13} />
-                          {t('selectParentElement')}
-                        </button>
-                      </div>
-                      <div className="section-caption">{t('textStyle')}</div>
-                      <label className="field-label">{t('textColor')}</label>
-                      <div className="color-field">
-                        <input
-                          aria-label={t('chooseTextColor')}
-                          type="color"
-                          value={/^#[0-9a-f]{6}$/i.test(color) ? color : '#343e33'}
-                          onChange={(event) => setColor(event.target.value)}
-                        />
-                        <input
-                          aria-label={t('textColorCode')}
-                          value={color}
-                          onChange={(event) => setColor(event.target.value)}
-                          maxLength={7}
-                        />
-                        <button
-                          className="small-button"
-                          onClick={() =>
-                            change((current) => changeStyle(current, selected.id, 'color', color))
-                          }
-                        >
-                          {t('apply')}
-                        </button>
-                      </div>
-                      <label className="field-label" htmlFor="font-size">
-                        {t('fontSize')}
-                      </label>
-                      <div className="number-field">
-                        <input
-                          id="font-size"
-                          type="number"
-                          min="1"
-                          max="256"
-                          step="0.5"
-                          value={fontSize}
-                          onChange={(event) => setFontSize(event.target.value)}
-                        />
-                        <span>px</span>
-                        <button
-                          className="small-button"
-                          onClick={() =>
-                            change((current) =>
-                              changeStyle(current, selected.id, 'font-size', `${fontSize}px`),
-                            )
-                          }
-                        >
-                          {t('apply')}
-                        </button>
-                      </div>
-                      {selected.textParts.length > 0 && (
-                        <>
-                          <div className="section-caption">{t('editText')}</div>
-                          {selected.textParts.map((part, index) => (
-                            <div className="text-part" key={part.index}>
-                              <label className="sr-only" htmlFor={`text-${part.index}`}>
-                                {t('textPart', { number: index + 1 })}
-                              </label>
-                              <textarea
-                                id={`text-${part.index}`}
-                                value={textEdits[part.index] ?? part.value}
-                                onChange={(event) =>
-                                  setTextEdits((values) => ({
-                                    ...values,
-                                    [part.index]: event.target.value,
-                                  }))
-                                }
-                              />
-                              <button
-                                className="small-button"
-                                onClick={() =>
-                                  textCommit(
-                                    selected.id,
-                                    part.index,
-                                    textEdits[part.index] ?? part.value,
-                                  )
-                                }
-                              >
-                                {t('applyText')}
-                              </button>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                      {selected.tag === 'img' && (
-                        <>
-                          <div className="section-caption">{t('image')}</div>
-                          <button
-                            className="button full-width"
-                            onClick={() => startImage('replace')}
-                          >
-                            <ImagePlus size={15} />
-                            {t('replaceImage')}
-                          </button>
-                          <button
-                            className="button full-width"
-                            onClick={() => startImage('properties')}
-                          >
-                            {t('imageProperties')}
-                          </button>
-                          <p className="field-hint">
-                            {t('pngJpegWebpGifUpTo10mb')}
-                            <br />
-                            {t('theNewImageIsEmbeddedInThe')}
-                          </p>
-                        </>
-                      )}
-                      <div className="element-actions">
+                        <strong>{t('selectedElementsCount', { count: selectedIds.length })}</strong>
+                        <p className="selection-summary">{selectionSummary}</p>
+                        <p className="field-hint">{t('multiSelectionHelp')}</p>
                         <button
                           className="button full-width"
                           onClick={() => {
@@ -1274,8 +1224,7 @@ export default function App() {
                             setTimeout(() => noteInput.current?.focus(), 0);
                           }}
                         >
-                          <MessageSquarePlus size={15} />
-                          {t('addANoteToThisElement')}
+                          {t('addGroupNote')}
                         </button>
                         <button
                           className="danger-button"
@@ -1283,304 +1232,447 @@ export default function App() {
                           onClick={removeSelected}
                         >
                           <Trash2 size={14} />
-                          {t('deleteSelectedElement')}
+                          {t('deleteSelectedElements')}
                         </button>
                       </div>
-                    </>
-                  ) : (
-                    <div className="sidebar-empty">
-                      <MousePointer2 size={28} strokeWidth={1.3} />
-                      <h3>
-                        {mode === 'interact'
-                          ? t('navigateToTheScreenYouWant')
-                          : t('clickWhatYouWantToChange')}
-                      </h3>
-                      <p>
-                        {mode === 'interact' ? (
+                    ) : selected ? (
+                      <>
+                        <div className="section-caption">{t('selectedElement')}</div>
+                        <div className="selected-card">
+                          <span className="tag-name">{selected.tag}</span>
+                          <p>{selected.excerpt || t('elementWithoutText')}</p>
+                          <button
+                            className="text-button"
+                            disabled={!selected.parentId}
+                            onClick={() => selected.parentId && jumpTo(selected.parentId)}
+                          >
+                            <ArrowUp size={13} />
+                            {t('selectParentElement')}
+                          </button>
+                        </div>
+                        <div className="section-caption">{t('textStyle')}</div>
+                        <label className="field-label">{t('textColor')}</label>
+                        <div className="color-field">
+                          <input
+                            aria-label={t('chooseTextColor')}
+                            type="color"
+                            value={/^#[0-9a-f]{6}$/i.test(color) ? color : '#343e33'}
+                            onChange={(event) => setColor(event.target.value)}
+                          />
+                          <input
+                            aria-label={t('textColorCode')}
+                            value={color}
+                            onChange={(event) => setColor(event.target.value)}
+                            maxLength={7}
+                          />
+                          <button
+                            className="small-button"
+                            onClick={() =>
+                              change((current) => changeStyle(current, selected.id, 'color', color))
+                            }
+                          >
+                            {t('apply')}
+                          </button>
+                        </div>
+                        <label className="field-label" htmlFor="font-size">
+                          {t('fontSize')}
+                        </label>
+                        <div className="number-field">
+                          <input
+                            id="font-size"
+                            type="number"
+                            min="1"
+                            max="256"
+                            step="0.5"
+                            value={fontSize}
+                            onChange={(event) => setFontSize(event.target.value)}
+                          />
+                          <span>px</span>
+                          <button
+                            className="small-button"
+                            onClick={() =>
+                              change((current) =>
+                                changeStyle(current, selected.id, 'font-size', `${fontSize}px`),
+                              )
+                            }
+                          >
+                            {t('apply')}
+                          </button>
+                        </div>
+                        {selected.textParts.length > 0 && (
                           <>
-                            {t('theDocumentMenusAndButtonsAreActive')}
-                            <br />
-                            {t('chooseEditDirectlyWhenYouReachThe')}
+                            <div className="section-caption">{t('editText')}</div>
+                            {selected.textParts.map((part, index) => (
+                              <div className="text-part" key={part.index}>
+                                <label className="sr-only" htmlFor={`text-${part.index}`}>
+                                  {t('textPart', { number: index + 1 })}
+                                </label>
+                                <textarea
+                                  id={`text-${part.index}`}
+                                  value={textEdits[part.index] ?? part.value}
+                                  onChange={(event) =>
+                                    setTextEdits((values) => ({
+                                      ...values,
+                                      [part.index]: event.target.value,
+                                    }))
+                                  }
+                                />
+                                <button
+                                  className="small-button"
+                                  onClick={() =>
+                                    textCommit(
+                                      selected.id,
+                                      part.index,
+                                      textEdits[part.index] ?? part.value,
+                                    )
+                                  }
+                                >
+                                  {t('applyText')}
+                                </button>
+                              </div>
+                            ))}
                           </>
-                        ) : (
-                          <>{t('selectTextAnImageOrACard')}</>
                         )}
-                      </p>
-                      <div className="tip-card">
-                        <strong>{t('quickTip')}</strong>
+                        {selected.tag === 'img' && (
+                          <>
+                            <div className="section-caption">{t('image')}</div>
+                            <button
+                              className="button full-width"
+                              onClick={() => startImage('replace')}
+                            >
+                              <ImagePlus size={15} />
+                              {t('replaceImage')}
+                            </button>
+                            <button
+                              className="button full-width"
+                              onClick={() => startImage('properties')}
+                            >
+                              {t('imageProperties')}
+                            </button>
+                            <p className="field-hint">
+                              {t('pngJpegWebpGifUpTo10mb')}
+                              <br />
+                              {t('theNewImageIsEmbeddedInThe')}
+                            </p>
+                          </>
+                        )}
+                        <div className="element-actions">
+                          <button
+                            className="button full-width"
+                            onClick={() => {
+                              setTab('notes');
+                              setMode('note');
+                              setTimeout(() => noteInput.current?.focus(), 0);
+                            }}
+                          >
+                            <MessageSquarePlus size={15} />
+                            {t('addANoteToThisElement')}
+                          </button>
+                          <button
+                            className="danger-button"
+                            disabled={!canDelete}
+                            onClick={removeSelected}
+                          >
+                            <Trash2 size={14} />
+                            {t('deleteSelectedElement')}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="sidebar-empty">
+                        <MousePointer2 size={28} strokeWidth={1.3} />
+                        <h3>
+                          {mode === 'interact'
+                            ? t('navigateToTheScreenYouWant')
+                            : t('clickWhatYouWantToChange')}
+                        </h3>
                         <p>
                           {mode === 'interact' ? (
-                            <>{t('yourCurrentScreenStaysInPlaceWhen')}</>
+                            <>
+                              {t('theDocumentMenusAndButtonsAreActive')}
+                              <br />
+                              {t('chooseEditDirectlyWhenYouReachThe')}
+                            </>
                           ) : (
-                            <>{t('doubleClickTextToEditItOn')}</>
+                            <>{t('selectTextAnImageOrACard')}</>
                           )}
                         </p>
+                        <div className="tip-card">
+                          <strong>{t('quickTip')}</strong>
+                          <p>
+                            {mode === 'interact' ? (
+                              <>{t('yourCurrentScreenStaysInPlaceWhen')}</>
+                            ) : (
+                              <>{t('doubleClickTextToEditItOn')}</>
+                            )}
+                          </p>
+                        </div>
                       </div>
+                    )}
+                    <div className="sidebar-bottom-tip">
+                      <Info size={14} />
+                      <p>{t('leaveANoteForNewElementsOr')}</p>
                     </div>
-                  )}
-                  <div className="sidebar-bottom-tip">
-                    <Info size={14} />
-                    <p>{t('leaveANoteForNewElementsOr')}</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="note-summary">
-                    <div>
-                      <span>
-                        {t(
-                          new Intl.PluralRules(locale).select(openCount) === 'one'
-                            ? 'pendingOne'
-                            : 'pendingOther',
-                          { count: openCount },
-                        )}
-                      </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="note-summary">
+                      <div>
+                        <span>
+                          {t(
+                            new Intl.PluralRules(locale).select(openCount) === 'one'
+                              ? 'pendingOne'
+                              : 'pendingOther',
+                            { count: openCount },
+                          )}
+                        </span>
+                      </div>
+                      <small>
+                        {t('noteSummary', {
+                          total: session.notes.length,
+                          done: session.notes.length - openCount,
+                        })}
+                      </small>
                     </div>
-                    <small>
-                      {t('noteSummary', {
-                        total: session.notes.length,
-                        done: session.notes.length - openCount,
-                      })}
-                    </small>
-                  </div>
-                  {rebindId && (
-                    <div className="rebind-box">
-                      <p>{t('selectANewTargetInTheDocument')}</p>
+                    {rebindId && (
+                      <div className="rebind-box">
+                        <p>{t('selectANewTargetInTheDocument')}</p>
+                        <button
+                          className="button primary full-width"
+                          disabled={!selected}
+                          onClick={() => {
+                            if (change((current) => rebindNote(current, rebindId, selectedIds))) {
+                              setRebindId(null);
+                              notify(message('noteTargetReassigned'));
+                            }
+                          }}
+                        >
+                          {t('connectToSelectedElement')}
+                        </button>
+                        <button className="text-button" onClick={() => setRebindId(null)}>
+                          {t('cancel')}
+                        </button>
+                      </div>
+                    )}
+                    <div className="note-composer">
+                      <div className="section-caption">
+                        {editingNoteId ? t('editNote') : t('newChangeRequest')}
+                      </div>
+                      <div className="composer-target">
+                        <span className="status-dot" />
+                        <span>
+                          {editingNoteId
+                            ? t('existingNoteTarget')
+                            : multiple
+                              ? t('selectedElementsCount', { count: selectedIds.length })
+                              : selected
+                                ? `〈${selected.tag}〉 ${selected.excerpt || t('selectedElement')}`
+                                : t('selectATargetInTheDocumentFirst')}
+                        </span>
+                      </div>
+                      {multiple && !editingNoteId && (
+                        <p className="selection-summary">{selectionSummary}</p>
+                      )}
+                      <p className="field-hint">{t('noteSelectionShortcuts')}</p>
+                      <label className="field-label" htmlFor="note-relation">
+                        {t('requestedPosition')}
+                      </label>
+                      <select
+                        id="note-relation"
+                        value={relation}
+                        onChange={(event) => setRelation(event.target.value as Relation)}
+                      >
+                        {Object.entries(RELATIONS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {format(label)}
+                          </option>
+                        ))}
+                      </select>
+                      <textarea
+                        ref={noteInput}
+                        aria-label={t('changeRequest')}
+                        placeholder={t('exampleAddAHomeIconBeforeThis')}
+                        value={noteText}
+                        maxLength={20_000}
+                        onChange={(event) => setNoteText(event.target.value)}
+                      />
                       <button
                         className="button primary full-width"
-                        disabled={!selected}
-                        onClick={() => {
-                          if (change((current) => rebindNote(current, rebindId, selectedIds))) {
-                            setRebindId(null);
-                            notify(message('noteTargetReassigned'));
-                          }
-                        }}
+                        disabled={!noteText.trim() || (!editingNoteId && !selected)}
+                        onClick={storeNote}
                       >
-                        {t('connectToSelectedElement')}
+                        <Plus size={15} />
+                        {editingNoteId ? t('saveNoteChanges') : t('addNote')}
                       </button>
-                      <button className="text-button" onClick={() => setRebindId(null)}>
-                        {t('cancel')}
-                      </button>
+                      {editingNoteId && (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setEditingNoteId(null);
+                            setNoteText('');
+                          }}
+                        >
+                          {t('cancelEditing')}
+                        </button>
+                      )}
                     </div>
-                  )}
-                  <div className="note-composer">
-                    <div className="section-caption">
-                      {editingNoteId ? t('editNote') : t('newChangeRequest')}
-                    </div>
-                    <div className="composer-target">
-                      <span className="status-dot" />
-                      <span>
-                        {editingNoteId
-                          ? t('existingNoteTarget')
-                          : multiple
-                            ? t('selectedElementsCount', { count: selectedIds.length })
-                            : selected
-                              ? `〈${selected.tag}〉 ${selected.excerpt || t('selectedElement')}`
-                              : t('selectATargetInTheDocumentFirst')}
-                      </span>
-                    </div>
-                    {multiple && !editingNoteId && (
-                      <p className="selection-summary">{selectionSummary}</p>
-                    )}
-                    <p className="field-hint">{t('noteSelectionShortcuts')}</p>
-                    <label className="field-label" htmlFor="note-relation">
-                      {t('requestedPosition')}
-                    </label>
-                    <select
-                      id="note-relation"
-                      value={relation}
-                      onChange={(event) => setRelation(event.target.value as Relation)}
-                    >
-                      {Object.entries(RELATIONS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {format(label)}
-                        </option>
+                    <div className="note-filters">
+                      {(
+                        [
+                          ['all', t('all')],
+                          ['open', t('pending')],
+                          ['done', t('completed')],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          className={filter === value ? 'active' : ''}
+                          key={value}
+                          onClick={() => setFilter(value)}
+                        >
+                          {label}
+                        </button>
                       ))}
-                    </select>
-                    <textarea
-                      ref={noteInput}
-                      aria-label={t('changeRequest')}
-                      placeholder={t('exampleAddAHomeIconBeforeThis')}
-                      value={noteText}
-                      maxLength={20_000}
-                      onChange={(event) => setNoteText(event.target.value)}
-                    />
-                    <button
-                      className="button primary full-width"
-                      disabled={!noteText.trim() || (!editingNoteId && !selected)}
-                      onClick={storeNote}
-                    >
-                      <Plus size={15} />
-                      {editingNoteId ? t('saveNoteChanges') : t('addNote')}
-                    </button>
-                    {editingNoteId && (
-                      <button
-                        className="text-button"
-                        onClick={() => {
-                          setEditingNoteId(null);
-                          setNoteText('');
-                        }}
-                      >
-                        {t('cancelEditing')}
-                      </button>
-                    )}
-                  </div>
-                  <div className="note-filters">
-                    {(
-                      [
-                        ['all', t('all')],
-                        ['open', t('pending')],
-                        ['done', t('completed')],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <button
-                        className={filter === value ? 'active' : ''}
-                        key={value}
-                        onClick={() => setFilter(value)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="note-list">
-                    {session.notes
-                      .map((note, index) => ({ note, index }))
-                      .filter(
-                        ({ note }) =>
-                          filter === 'all' || (filter === 'done' ? note.done : !note.done),
-                      )
-                      .map(({ note, index }) => {
-                        const targets = noteTargets(note);
-                        const existing = targets.filter((target) => elementMap.has(target.id));
-                        const exists = existing.length === targets.length;
-                        return (
-                          <article
-                            key={note.id}
-                            className={`note-card ${note.done ? 'complete' : ''}`}
-                            data-testid="note-card"
-                            data-note-id={note.id}
-                          >
-                            <div className="note-card-top">
-                              <button
-                                className="note-number"
-                                disabled={!existing.length}
-                                onClick={() => {
-                                  marker(note.id, existing[0].id);
-                                  setJump({ id: existing[0].id, nonce: Date.now() });
-                                }}
-                              >
-                                {index + 1}
-                              </button>
-                              <span>
-                                {targets.length > 1
-                                  ? t('noteTargetsCount', {
-                                      count: targets.length,
-                                      missing: targets.length - existing.length,
-                                    })
-                                  : exists
-                                    ? `〈${note.target.tag}〉 ${format(RELATIONS[note.relation])}`
-                                    : t('targetMissing')}
-                              </span>
-                              <button
-                                className="icon-button"
-                                aria-label={t('deleteNote', { number: index + 1 })}
-                                onClick={() => {
-                                  change((current) => ({
-                                    ...current,
-                                    notes: current.notes.filter((item) => item.id !== note.id),
-                                  }));
-                                  if (editingNoteId === note.id) {
-                                    setEditingNoteId(null);
-                                    setNoteText('');
-                                  }
-                                  if (rebindId === note.id) setRebindId(null);
-                                }}
-                              >
-                                <X size={13} />
-                              </button>
-                            </div>
-                            <p className="note-content">{note.text}</p>
-                            <small className="target-excerpt">
-                              {note.target.excerpt || note.target.tag}
-                            </small>
-                            {targets.length > 1 && (
-                              <div className="note-target-list">
-                                {targets.map((target) => (
-                                  <button
-                                    key={target.id}
-                                    disabled={!elementMap.has(target.id)}
-                                    onClick={() => {
-                                      marker(note.id, target.id);
-                                      setJump({ id: target.id, nonce: Date.now() });
-                                    }}
-                                  >
-                                    〈{target.tag}〉 {target.excerpt || t('elementWithoutText')}
-                                    {!elementMap.has(target.id) && ` — ${t('targetMissing')}`}
-                                  </button>
-                                ))}
+                    </div>
+                    <div className="note-list">
+                      {session.notes
+                        .map((note, index) => ({ note, index }))
+                        .filter(
+                          ({ note }) =>
+                            filter === 'all' || (filter === 'done' ? note.done : !note.done),
+                        )
+                        .map(({ note, index }) => {
+                          const targets = noteTargets(note);
+                          const existing = targets.filter((target) => elementMap.has(target.id));
+                          const exists = existing.length === targets.length;
+                          return (
+                            <article
+                              key={note.id}
+                              className={`note-card ${note.done ? 'complete' : ''}`}
+                              data-testid="note-card"
+                              data-note-id={note.id}
+                            >
+                              <div className="note-card-top">
+                                <button
+                                  className="note-number"
+                                  disabled={!existing.length}
+                                  onClick={() => {
+                                    marker(note.id, existing[0].id);
+                                    setJump({ id: existing[0].id, nonce: Date.now() });
+                                  }}
+                                >
+                                  {index + 1}
+                                </button>
+                                <span>
+                                  {targets.length > 1
+                                    ? t('noteTargetsCount', {
+                                        count: targets.length,
+                                        missing: targets.length - existing.length,
+                                      })
+                                    : exists
+                                      ? `〈${note.target.tag}〉 ${format(RELATIONS[note.relation])}`
+                                      : t('targetMissing')}
+                                </span>
+                                <button
+                                  className="icon-button"
+                                  aria-label={t('deleteNote', { number: index + 1 })}
+                                  onClick={() => {
+                                    change((current) => ({
+                                      ...current,
+                                      notes: current.notes.filter((item) => item.id !== note.id),
+                                    }));
+                                    if (editingNoteId === note.id) {
+                                      setEditingNoteId(null);
+                                      setNoteText('');
+                                    }
+                                    if (rebindId === note.id) setRebindId(null);
+                                  }}
+                                >
+                                  <X size={13} />
+                                </button>
                               </div>
-                            )}
-                            <div className="note-card-actions">
-                              <button
-                                onClick={() =>
-                                  change((current) =>
-                                    updateNote(current, note.id, { done: !note.done }),
-                                  )
-                                }
-                              >
-                                {note.done ? <RotateCcw size={12} /> : <Check size={12} />}
-                                {note.done ? t('reopen') : t('completed')}
-                              </button>
-                              <button onClick={() => editNote(note)}>{t('edit')}</button>
-                              <button
-                                onClick={() => {
-                                  setRebindId(note.id);
-                                  setMode('select');
-                                }}
-                              >
-                                {t('reassignTarget')}
-                              </button>
-                            </div>
-                          </article>
-                        );
-                      })}
-                    {session.notes.length === 0 && (
-                      <div className="no-notes">
-                        <MessageSquarePlus size={23} strokeWidth={1.4} />
-                        <p>
-                          {t('noNotesYet')}
-                          <br />
-                          {t('pointToALocationOnTheScreen')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="sidebar-footer">
-              <button
-                className="button full-width"
-                onClick={() => void copy()}
-                disabled={
-                  saving ||
-                  copying ||
-                  opening ||
-                  conflict ||
-                  Boolean(session.metadataIssue) ||
-                  (Boolean(token) && !connected)
-                }
-              >
-                <Copy size={14} />
-                {copying ? t('savingAndCopying') : t('saveAndCopyAiRequest')}
-              </button>
-              <p>
-                {token
-                  ? t('savesYourEditsAndNotesThenCopies')
-                  : t('downloadsReviewHtmlAndCopiesTheRequest')}
-              </p>
-            </div>
-          </aside>
+                              <p className="note-content">{note.text}</p>
+                              <small className="target-excerpt">
+                                {note.target.excerpt || note.target.tag}
+                              </small>
+                              {targets.length > 1 && (
+                                <div className="note-target-list">
+                                  {targets.map((target) => (
+                                    <button
+                                      key={target.id}
+                                      disabled={!elementMap.has(target.id)}
+                                      onClick={() => {
+                                        marker(note.id, target.id);
+                                        setJump({ id: target.id, nonce: Date.now() });
+                                      }}
+                                    >
+                                      〈{target.tag}〉 {target.excerpt || t('elementWithoutText')}
+                                      {!elementMap.has(target.id) && ` — ${t('targetMissing')}`}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="note-card-actions">
+                                <button
+                                  onClick={() =>
+                                    change((current) =>
+                                      updateNote(current, note.id, { done: !note.done }),
+                                    )
+                                  }
+                                >
+                                  {note.done ? <RotateCcw size={12} /> : <Check size={12} />}
+                                  {note.done ? t('reopen') : t('completed')}
+                                </button>
+                                <button onClick={() => editNote(note)}>{t('edit')}</button>
+                                <button
+                                  onClick={() => {
+                                    setRebindId(note.id);
+                                    setMode('select');
+                                  }}
+                                >
+                                  {t('reassignTarget')}
+                                </button>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      {session.notes.length === 0 && (
+                        <div className="no-notes">
+                          <MessageSquarePlus size={23} strokeWidth={1.4} />
+                          <p>
+                            {t('noNotesYet')}
+                            <br />
+                            {t('pointToALocationOnTheScreen')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="sidebar-footer">
+                <button
+                  className="button full-width"
+                  onClick={() => void copy()}
+                  disabled={
+                    saving ||
+                    copying ||
+                    opening ||
+                    conflict ||
+                    Boolean(session.metadataIssue) ||
+                    (Boolean(token) && !connected)
+                  }
+                >
+                  <Copy size={14} />
+                  {copying ? t('savingAndCopying') : t('saveAndCopyAiRequest')}
+                </button>
+                <p>
+                  {token
+                    ? t('savesYourEditsAndNotesThenCopies')
+                    : t('downloadsReviewHtmlAndCopiesTheRequest')}
+                </p>
+              </div>
+            </aside>
+          )}
         </main>
       )}
       <footer className="app-footer">

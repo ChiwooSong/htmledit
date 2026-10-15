@@ -5,4 +5,5 @@ playwright-report
 public/examples
 # Captured verification artifacts: preserve the bytes recorded in verification.json.
 docs/examples/ai-workflow-20261014/*.html
+docs/examples/change-requests/*.html
 package-lock.json
