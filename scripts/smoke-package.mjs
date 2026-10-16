@@ -120,6 +120,66 @@ try {
   );
   assert((await readFile(result.backup, 'utf8')).includes('Package smoke'));
   assert((await readFile(review, 'utf8')).includes('Applied candidate'));
+  // Exercise the shipped request commands and skill reference, not the source tree.
+  assert(
+    (
+      await readFile(
+        join(userHome, '.agents', 'skills', 'htmledit', 'references', 'change-requests.md'),
+        'utf8',
+      )
+    ).includes('requests submit'),
+  );
+  const url = new URL(opened.url);
+  const token = new URLSearchParams(url.hash.slice(1)).get('htmledit');
+  const response = await fetch(url.origin + '/api/change-requests', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Origin: url.origin,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'Package request', source: 'Rename the heading' }),
+  });
+  assert(response.ok);
+  const batch = await response.json();
+  const requestCheckout = JSON.parse(
+    await run(process.execPath, [
+      runner,
+      'requests',
+      'checkout',
+      '--file',
+      review,
+      '--batch',
+      batch.id,
+      '--json',
+    ]),
+  );
+  const beforeSubmission = await readFile(review, 'utf8');
+  await writeFile(requestCheckout.candidate, JSON.stringify({ version: 1, proposals: [] }));
+  const submitted = JSON.parse(
+    await run(process.execPath, [
+      runner,
+      'requests',
+      'submit',
+      '--file',
+      review,
+      '--batch',
+      batch.id,
+      '--candidate',
+      requestCheckout.candidate,
+      '--revision',
+      requestCheckout.revision,
+      '--json',
+    ]),
+  );
+  assert.equal(submitted.analysis.submitted, true);
+  assert.equal(await readFile(review, 'utf8'), beforeSubmission);
+  assert.equal(
+    JSON.parse(
+      await run(process.execPath, [runner, 'requests', 'status', '--file', review, '--json']),
+    )[0].id,
+    batch.id,
+  );
   // Installer works without the npx cache: its script resolves the persistent runtime.
   assert((await readFile(runner, 'utf8')).includes('/.htmledit/versions/'));
   await run(process.execPath, [runner, 'install', '--agent', 'all']);
@@ -154,6 +214,8 @@ try {
           'persistent runtime',
           'open/reuse',
           'checkout/apply/backup',
+          'requests checkout/submit/status and unchanged HTML',
+          'installed change-request reference',
           'reinstall',
           'reinstall through a directory alias',
           'modified-skill protection',

@@ -134,3 +134,9 @@ Haz clic para seleccionar un elemento. Ctrl+clic (Cmd+clic en Mac) añade o quit
 **Supr** elimina los elementos seleccionados sin confirmación. **Ctrl+Z / Cmd+Z** restaura toda la eliminación en un paso. Las notas se conservan. Este atajo no elimina elementos mientras escribes texto o notas, editas texto en línea, usas un diálogo o el modo Interactuar. No se puede eliminar el cuerpo del documento.
 
 La edición directa con selección múltiple permite eliminar en conjunto. Selecciona un elemento para editar texto, color, tamaño o imagen; no se incluye estilo masivo. Las notas de un solo destino siguen usando review v1; los archivos con notas conjuntas usan v2. Actualiza el editor y el runtime de IA antes de usarlas. Las versiones anteriores rechazan v2 para evitar perder destinos.
+
+## Importar solicitudes de cambio (nuevo en 1.6.0)
+
+Pegue instrucciones, notas personales, comentarios o actas, o importe TXT/MD UTF-8 o DOCX. Guarde y copie el pedido de análisis para su conversación de IA existente. Revise las propuestas, sus elementos y las citas originales; solo las aprobadas se convierten en notas. El siguiente pedido desde ese panel aplica únicamente esas notas.
+
+Requiere el modo local conectado. Actualiza tanto el editor como los skills instalados a 1.6.0 o posterior. El original y el historial permanecen en `.htmledit/`, fuera del HTML exportado. [Formato y límites](../CHANGE_REQUESTS_FORMAT.md) · [Verificación](../CHANGE_REQUESTS_VERIFICATION.md).

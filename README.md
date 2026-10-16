@@ -73,6 +73,16 @@ The editor runs locally. HTMLEdit does not call an AI API or collect usage telem
 
 ## Start with a single HTML file
 
+### Import change requests (new in 1.6.0)
+
+Paste free-form instructions, personal notes, collected feedback or meeting notes, or import a UTF-8 TXT/MD or DOCX file. **Save and copy analysis request** asks your existing Claude Code or Codex session to turn the source into element-linked suggestions. Review the quoted evidence, edit requests and targets, resolve ambiguities, and approve only what you want.
+
+**Add approved suggestions as notes** leaves the rendered HTML unchanged. Then use **Save and copy AI request** in the request panel to apply only those note IDs through the existing backup and revision checks. Source text and review history stay in the document's local `.htmledit` folder; exports contain no source text or unapproved suggestions.
+
+This feature requires local connected mode. Update both the editor and installed skills to **1.6.0 or later** using the installation commands above. [Usage and limits](docs/CHANGE_REQUESTS.md) · [AI/API format](docs/CHANGE_REQUESTS_FORMAT.md) · [Verification evidence](docs/CHANGE_REQUESTS_VERIFICATION.md).
+
+## Supported documents
+
 Best suited to static documents, landing pages and reports with embedded styles and images. The UI supports English, Korean, Spanish, Japanese and Brazilian Portuguese.
 
 External resources must remain accessible. Related local asset folders are not collected. React apps, runtime Tailwind and dynamic charts are outside the supported scope. Trusted inline menus and tabs can be navigated in **Interact** mode before editing.

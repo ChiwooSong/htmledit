@@ -1,0 +1,117 @@
+{
+  "agent": "claude",
+  "noteIds": [
+    "he-request-f2f3098faff4e7730300895376a06df3555f5e10",
+    "he-request-09a448a0a78b618658d14a20a1ffea13754eeaee",
+    "he-request-ea0a79c84b60d614bd209b91a8734f91508abbc4"
+  ],
+  "automaticRefresh": true,
+  "cleanExport": true,
+  "reload": true,
+  "originalSha256": "5b2abd2dfd29540de1f446aac05a8ca2d8ac49d00a5fb7d514e0f4ceff507b36",
+  "proposals": [
+    {
+      "id": "hero-heading-text",
+      "text": "첫 화면 큰 제목(h1)을 '함께 만드는 변화'로 바꾸기",
+      "targetIds": ["he-3fe4de73-0b50-4578-b715-5b90fd1b0b2b"],
+      "relation": "self",
+      "evidence": [
+        {
+          "paragraphId": "p1",
+          "quote": "첫 화면 큰 제목은 '함께 만드는 변화'로 바꾸자."
+        },
+        {
+          "paragraphId": "p5",
+          "quote": "큰 제목은 아까 말한 '함께 만드는 변화'가 맞아. 같은 요청이야."
+        }
+      ],
+      "issues": [],
+      "decision": "pending",
+      "resolved": false
+    },
+    {
+      "id": "start-button-star-icon",
+      "text": "시작하기 버튼 앞에 작은 별 아이콘 하나 추가하기",
+      "targetIds": ["he-71e93781-deb4-4e56-985b-01e7fdecedd7"],
+      "relation": "before",
+      "evidence": [
+        {
+          "paragraphId": "p2",
+          "quote": "시작하기 버튼 앞에 작은 별 아이콘을 하나 넣어 줘."
+        }
+      ],
+      "issues": [],
+      "decision": "pending",
+      "resolved": false
+    },
+    {
+      "id": "second-card-remove-description",
+      "text": "둘째 카드의 설명 문장 삭제하기",
+      "targetIds": ["he-4c5f2f28-cc90-424d-9d4a-6cfbf50901bc"],
+      "relation": "self",
+      "evidence": [
+        {
+          "paragraphId": "p3",
+          "quote": "둘째 카드의 설명 문장은 빼자."
+        }
+      ],
+      "issues": [],
+      "decision": "pending",
+      "resolved": false
+    },
+    {
+      "id": "card-titles-larger",
+      "text": "첫째·둘째 카드 제목 글자를 모두 조금 크게 하기",
+      "targetIds": [
+        "he-4611b78b-7372-4cfe-8fcd-2aea7fb8aafd",
+        "he-12c4fc7e-23a3-427b-9e30-4b8c706b9925"
+      ],
+      "relation": "self",
+      "evidence": [
+        {
+          "paragraphId": "p4",
+          "quote": "두 카드 제목은 모두 글자를 조금 크게 해 줘."
+        }
+      ],
+      "issues": [],
+      "decision": "pending",
+      "resolved": false
+    },
+    {
+      "id": "first-card-background",
+      "text": "첫째 카드 배경색 변경: 파란색과 초록색 요청이 충돌하며 아직 결정되지 않음. 색상을 선택해야 함",
+      "targetIds": ["he-beb0073b-9ae9-4f53-86d0-58e83d88c163"],
+      "relation": "self",
+      "evidence": [
+        {
+          "paragraphId": "p6",
+          "quote": "첫째 카드 배경은 파란색이 좋아."
+        },
+        {
+          "paragraphId": "p7",
+          "quote": "아니, 첫째 카드 배경은 초록색으로 해야 해. 아직 결정 못 했어."
+        }
+      ],
+      "issues": ["conflict", "unclear"],
+      "decision": "pending",
+      "resolved": false
+    },
+    {
+      "id": "unspecified-emphasis",
+      "text": "'저것'을 좀 더 눈에 띄게 하기: 가리키는 대상과 강조 방식이 불명확함. 대상을 지정해야 함",
+      "targetIds": [],
+      "relation": "self",
+      "evidence": [
+        {
+          "paragraphId": "p8",
+          "quote": "저것도 좀 더 눈에 띄게 해 줘."
+        }
+      ],
+      "issues": ["missing-target", "unclear"],
+      "decision": "pending",
+      "resolved": false
+    }
+  ],
+  "backupSha256": "6FC515916780370AC741F437EAA17B0E6EE3D249FA298337C178622E001BFF62",
+  "backupMatchesBeforeApply": true
+}

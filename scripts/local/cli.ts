@@ -312,6 +312,34 @@ async function main() {
       console.error(translate(cliLocale, 'couldNotOpenTheBrowserAutomaticallyOpen'));
     return output({ file, url, version: connection.version });
   }
+  if (command === 'requests') {
+    const name = option('--file');
+    if (!name) throw new LocalError('INPUT', message('provideFileWorkingFile'));
+    const batch = option('--batch');
+    if (batch && !/^[0-9a-f-]{36}$/.test(batch))
+      throw new LocalError('REQUEST_INPUT', 'Invalid request batch ID.');
+    const running = await ensure(await canonicalFile(name));
+    const route = `change-requests${batch ? '/' + batch : ''}`;
+    if (args[1] === 'status') return output(await request(running, route));
+    if (!batch) throw new LocalError('REQUEST_INPUT', 'Provide --batch <request batch ID>.');
+    if (args[1] === 'checkout')
+      return output(await request(running, route + '/checkout', 'POST', {}));
+    if (args[1] === 'submit') {
+      const candidate = option('--candidate'),
+        revision = option('--revision');
+      if (!candidate || !revision)
+        throw new LocalError('INPUT', message('provideCandidateAndRevision'));
+      const info = await import('node:fs/promises').then((fs) => fs.stat(candidate));
+      if (!info.isFile() || info.size > 10 * 1024 * 1024)
+        throw new LocalError('REQUEST_INPUT', 'Proposal file is too large or invalid.');
+      const bytes = await readFile(candidate);
+      if (bytes.length > 10 * 1024 * 1024)
+        throw new LocalError('REQUEST_INPUT', 'Proposal file is too large.');
+      const submission = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+      return output(await request(running, route + '/submit', 'POST', { revision, submission }));
+    }
+    throw new LocalError('REQUEST_INPUT', 'Use requests status|checkout|submit.');
+  }
   if (['status', 'checkout', 'apply', 'stop'].includes(command)) {
     const name = option('--file');
     if (!name) throw new LocalError('INPUT', message('provideFileWorkingFile'));
@@ -340,6 +368,7 @@ async function main() {
   }
   console.log(
     'HTMLEdit\n  install --agent claude|codex|all\n  open <file.html> [--no-browser]\n  status|checkout|stop --file <file.review.html>\n  apply --file <file.review.html> --candidate <file> --revision <hash>\n  uninstall --agent claude|codex|all\n' +
+      '  requests status|checkout|submit --file <review.html> [--batch <id>] [--candidate <json> --revision <hash>]\n' +
       translate(cliLocale, 'cliHelp') +
       '',
   );

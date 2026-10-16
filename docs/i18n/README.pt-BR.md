@@ -134,3 +134,9 @@ Clique para selecionar um elemento. Ctrl+clique (Cmd+clique no Mac) adiciona ou 
 **Del** exclui os elementos selecionados sem confirmação. **Ctrl+Z / Cmd+Z** restaura toda a exclusão em uma etapa. As notas são mantidas. Esse atalho não exclui elementos durante a digitação de textos ou notas, a edição de texto na página, o uso de diálogos ou o modo Interagir. O corpo inteiro do documento não pode ser excluído.
 
 Na edição direta, a seleção múltipla oferece exclusão em lote. Selecione um elemento para editar texto, cor, tamanho ou imagem; estilos em lote não estão incluídos. Notas com um alvo continuam em review v1; arquivos com notas conjuntas usam v2. Atualize o editor e o runtime de IA antes de usá-las. Versões anteriores rejeitam v2 para evitar a perda de alvos.
+
+## Importar solicitações de alteração (novo na versão 1.6.0)
+
+Cole instruções, notas pessoais, feedback ou atas, ou importe TXT/MD UTF-8 ou DOCX. Salve e copie o pedido de análise para sua conversa de IA existente. Revise as sugestões, os elementos e as citações do original; somente as aprovadas viram notas. O próximo pedido pelo mesmo painel aplica apenas essas notas.
+
+Exige o modo local conectado. Atualize tanto o editor quanto os skills instalados para 1.6.0 ou posterior. O original e o histórico ficam em `.htmledit/`, fora do HTML exportado. [Formato e limites](../CHANGE_REQUESTS_FORMAT.md) · [Verificação](../CHANGE_REQUESTS_VERIFICATION.md).

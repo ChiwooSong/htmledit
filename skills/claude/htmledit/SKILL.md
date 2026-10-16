@@ -1,6 +1,6 @@
 ---
 name: htmledit
-description: Open a local HTML file in HTMLEdit for visual edits and element-linked feedback, or apply the user's saved HTMLEdit notes to its review file. Use for HTMLEdit workflows, not generic website development.
+description: Open a local HTML file in HTMLEdit for visual edits and element-linked feedback, analyze imported change requests into reviewable proposals, or apply the user's approved HTMLEdit notes. Use for HTMLEdit workflows, not generic website development.
 ---
 
 # HTMLEdit
@@ -19,6 +19,12 @@ Report the working path and confirm the browser opened. The URL carries the edit
 Respond in the user's language. The editor supports ko, en, es, ja and pt-BR; use `open ... --lang <code>` only when the user requests a specific language. Otherwise let the saved choice or browser language decide.
 Tell the user to click **Save and copy AI request** using its localized name from [references/languages.md](references/languages.md), then paste the request here. This saves the working file first. **Save working file** saves without copying. Unsaved input must be applied or cancelled first; a failed save does not copy a request. Do not translate the user's document, notes or filenames unless asked.
 Do not apply notes merely because a document was opened.
+
+## Analyze imported change requests
+
+When the user supplies a change-request batch ID, read [references/change-requests.md](references/change-requests.md). Use `requests status`, `requests checkout`, then `requests submit` through this skill's runner. Analyze the returned source against the HTML snapshot and submit proposals only. Do not approve proposals, convert them to notes, or edit HTML during analysis. Free-form feedback, personal notes and meeting notes use the same workflow.
+
+When the subsequent user request lists approved note IDs, apply only those IDs through the saved-note workflow below. Preserve unrelated notes and document content; never treat an unapproved proposal as a saved note.
 
 ## Apply saved notes
 

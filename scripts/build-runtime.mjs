@@ -12,4 +12,8 @@ await build({
 for (const agent of ['claude', 'codex']) {
   await mkdir(`skills/${agent}/htmledit/references`, { recursive: true });
   await copyFile('docs/REVIEW_FORMAT.md', `skills/${agent}/htmledit/references/review-format.md`);
+  await copyFile(
+    'docs/CHANGE_REQUESTS_FORMAT.md',
+    `skills/${agent}/htmledit/references/change-requests.md`,
+  );
 }

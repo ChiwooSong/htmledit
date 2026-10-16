@@ -257,12 +257,16 @@ export default function Preview(props: Props) {
       ) {
         event.preventDefault();
         event.stopPropagation();
+        // srcdoc is replaced after document edits. Keep keyboard focus outside
+        // that transient document so a rapid undo/redo is not lost during load.
+        wrapper.current?.focus({ preventScroll: true });
         latest.current.onDelete();
         return;
       }
       if ((event.ctrlKey || event.metaKey) && ['z', 'y'].includes(event.key.toLowerCase())) {
         event.preventDefault();
         event.stopPropagation();
+        wrapper.current?.focus({ preventScroll: true });
         latest.current.onHistory(
           event.key.toLowerCase() === 'y' || event.shiftKey ? 'redo' : 'undo',
         );
@@ -378,6 +382,7 @@ export default function Preview(props: Props) {
       <div
         ref={wrapper}
         className="frame-wrap"
+        tabIndex={-1}
         style={{ width: props.width === 'mobile' ? 390 : props.width === 'tablet' ? 768 : '100%' }}
       >
         <iframe

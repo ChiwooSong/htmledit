@@ -13,6 +13,7 @@ import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { DocumentStore, LIMIT, LocalError } from './store';
+import { ChangeRequestStore } from './change-requests';
 
 const mime: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -44,6 +45,7 @@ export async function startServer(
   preferences = new Preferences(),
 ) {
   const store = new DocumentStore(file);
+  const changes = new ChangeRequestStore(store);
   await store.read();
   const token = randomBytes(32).toString('hex');
   let origin = '';
@@ -69,6 +71,36 @@ export async function startServer(
           ['cross-site', 'same-site'].includes(String(request.headers['sec-fetch-site']))
         )
           throw new LocalError('AUTH', message('onlyTheEditorConnectedToThisTask'), 403);
+        if (
+          url.pathname === '/api/change-requests' ||
+          url.pathname.startsWith('/api/change-requests/')
+        ) {
+          const match = url.pathname.match(
+            /^\/api\/change-requests(?:\/([0-9a-f-]{36})(?:\/(checkout|submit|commit))?)?$/,
+          );
+          if (!match || url.search)
+            throw new LocalError('REQUEST_INPUT', 'Invalid change-request route.');
+          const [, id, action] = match;
+          if (request.method === 'GET' && !action)
+            return json(200, id ? await changes.get(id) : await changes.list());
+          const data = await body(request);
+          if (!data || typeof data !== 'object' || Array.isArray(data))
+            throw new LocalError('REQUEST_INPUT', 'A JSON object is required.');
+          // Analysis commands may be called by the CLI; review/approval is an editor action.
+          if ((!action || action === 'commit') && request.headers.origin !== origin)
+            throw new LocalError('ORIGIN', 'Review changes from the connected editor.', 403);
+          if (!id && request.method === 'POST') return json(201, await changes.create(data));
+          if (id && !action && request.method === 'PUT')
+            return json(200, await changes.update(id, data));
+          if (id && !action && request.method === 'DELETE')
+            return json(200, await changes.remove(id, data.revision));
+          if (id && request.method === 'POST') {
+            if (action === 'checkout') return json(200, await changes.checkout(id));
+            if (action === 'submit') return json(200, await changes.submit(id, data));
+            if (action === 'commit') return json(200, await changes.commit(id, data));
+          }
+          throw new LocalError('METHOD', 'Unsupported change-request operation.', 405);
+        }
         if (url.pathname === '/api/preferences') {
           if (request.method === 'GET') return json(200, await preferences.read());
           if (request.method === 'PUT') {
