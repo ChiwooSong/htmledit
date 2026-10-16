@@ -2,7 +2,7 @@
 
 자유롭게 적은 수정 요청을 AI가 요소별 제안으로 정리하고, 사용자가 검토한 항목만 메모로 추가하는 기능입니다. 개인 메모, 상사의 지시, 여러 사람의 피드백, 회의록을 같은 방식으로 가져옵니다. 요청이 한 개여도 사용할 수 있습니다.
 
-현재 개발 후보 기능이며 npm에 게시하지 않았습니다. 편집기와 스킬 런타임을 함께 사용해야 합니다.
+1.6.0부터 제공하는 기능입니다. 편집기와 설치된 스킬을 모두 1.6.0 이상으로 업데이트해야 합니다.
 
 ## 사용 순서
 
@@ -31,14 +31,13 @@
 - DOCX 압축 해제는 최대 50MiB·1,000항목·10초입니다. 손상·암호화된 파일은 UTF-8 TXT로 내보내 다시 가져오세요.
 - 녹음·PDF·구형 DOC는 지원하지 않습니다. 원문이 AI에 전달되려면 사용자가 분석 요청을 직접 기존 대화에 붙여넣어야 합니다.
 
-## 개발 후보 실행
+## 설치와 실행
 
 ```sh
-npm ci
-npm run build
-node runtime/cli.mjs open "문서.html"
+npx --yes @woody_s/htmledit@1.6.0 install --agent all
+npx --yes @woody_s/htmledit@1.6.0 open "문서.html"
 ```
 
-개발 체크아웃에서는 `node skills/codex/htmledit/scripts/run.mjs` 또는 `node skills/claude/htmledit/scripts/run.mjs`로 새 CLI를 실행할 수 있습니다. 기존 설치된 npm 스킬은 게시된 런타임을 사용하므로 새 명령이 없을 수 있습니다. 실제 문서에 시험하기 전 복사본에서 확인하세요.
+문서가 있는 폴더에서 실행하고, 설치 후 Claude Code 또는 Codex의 새 대화에서 스킬을 사용하세요. 기존 스킬은 설치 당시의 런타임을 사용하므로 설치 명령을 다시 실행해 함께 업데이트합니다. `--agent claude` 또는 `--agent codex`로 하나만 설치할 수도 있습니다.
 
 API와 제안 JSON 규약은 [CHANGE_REQUESTS_FORMAT.md](CHANGE_REQUESTS_FORMAT.md), 실제 AI 및 자동 테스트의 구분은 [검증 기록](CHANGE_REQUESTS_VERIFICATION.md)에 있습니다.
